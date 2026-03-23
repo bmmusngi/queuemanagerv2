@@ -1,5 +1,6 @@
 # --- Stage 1: Build ---
-FROM node:18-alpine AS builder
+FROM node:20-slim AS builder
+
 
 WORKDIR /app
 
@@ -7,7 +8,8 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm install
+
 
 # Copy the rest of the application code
 COPY . .

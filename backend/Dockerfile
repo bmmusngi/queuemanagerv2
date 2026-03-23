@@ -1,5 +1,7 @@
 # --- Stage 1: Build ---
-FROM node:18-alpine AS builder
+FROM node:20-slim AS builder
+RUN apt-get update && apt-get install -y openssl
+
 
 WORKDIR /app
 
@@ -8,7 +10,8 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install all dependencies (including dev dependencies for NestJS CLI)
-RUN npm install
+RUN NODE_OPTIONS="--max-old-space-size=2048" npm install
+
 
 # Generate Prisma Client
 RUN npx prisma generate
