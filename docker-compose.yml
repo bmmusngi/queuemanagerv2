@@ -1,4 +1,4 @@
-  version: '3.8'
+version: '3.8'
 
 services:
   # 1. PostgreSQL Database
@@ -25,7 +25,6 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      # THIS IS THE FIX: Bind mounts go inside the service, not at the bottom
       - ./logs:/app/logs
     environment:
       - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
@@ -45,6 +44,6 @@ services:
     depends_on:
       - backend
 
-# TOP-LEVEL VOLUMES: Only for named volumes
+# Persistent storage for the database
 volumes:
   pgdata:
