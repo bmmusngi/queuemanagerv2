@@ -8,14 +8,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy everything else
+# Copy everything else and generate Prisma
 COPY . .
 RUN npx prisma generate
 
-# IMPORTANT: We DO NOT run 'npm run build' here.
-# Instead, we run it when the container starts so it can write to the /app/logs volume.
-
 EXPOSE 3001
 
-# This command builds the app, saves the output to your NAS folder, and then starts the app
-CMD ["sh", "-c", "npm run build > /app/logs/build.log 2>&1 && npm run start:prod"]
+# THE ZOMBIE TRAP:
+# Try to build and start. If it fails (||), print a warning and sleep for 1 hour.
+# This keeps the container alive so you can read the logs in Portainer!
+CMD ["sh", "-c", "npm run build && npm run start:prod || (echo '!!! BUILD FAILED !!! Check errors above.' && sleep 3600)"]
