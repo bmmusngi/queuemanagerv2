@@ -14,7 +14,7 @@ export class QueueingGroupService {
   // READ: Get all groups
   async getAllGroups() {
     return await prisma.queueingGroup.findMany({
-      include: { name: true, sport: true }, // Pulls in the sport name automatically
+      include: { sport: true }, // Pulls in the sport name automatically
       orderBy: { name: 'asc' }, // Alphabetical order
     });
   }
