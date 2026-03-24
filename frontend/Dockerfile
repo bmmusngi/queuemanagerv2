@@ -1,29 +1,18 @@
-# --- Stage 1: Build ---
-FROM node:20-slim AS builder
+FROM node:20-slim
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies (with memory limit for slim environment)
+# Install dependencies 
 RUN NODE_OPTIONS="--max-old-space-size=2048" npm install
 
 # Copy the rest of the application code
 COPY . .
 
-# Build the React application using the "Capture and Scream" hack
-# If Vite/TypeScript fails, it prints the exact error to Portainer and stops.
-RUN npm run build > build_debug.log 2>&1 || (cat build_debug.log && exit 1)
+EXPOSE 3000
 
-# --- Stage 2: Production Server ---
-FROM nginx:alpine
-
-# Copy the built React app to Nginx's public folder
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Expose port 80 for Nginx
-EXPOSE 80
-
-# Start Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# THE ZOMBIE TRAP:
+# Try to build. If it fails, print a warning and sleep so we can read the logs!
+CMD ["sh", "-c", "npm run build || (echo '!!! FRONTEND BUILD FAILED !!! Check errors above.' && sleep 3600)"]
