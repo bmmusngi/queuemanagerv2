@@ -11,12 +11,13 @@ export class SportService {
   }
 
   // CREATE: Bulk add multiple sports (e.g., Badminton, Tennis, Table Tennis)
-  async createSportsBulk(data: Prisma.PrismaPromise<Prisma.SportCreateManyInput[]>) {
+  async createSportsBulk(data: Prisma.SportCreateManyInput[]) {
     return await prisma.sport.createMany({
       data,
       skipDuplicates: true,
     });
   }
+
 
   // READ: Get all sports
   async getAllSports() {
