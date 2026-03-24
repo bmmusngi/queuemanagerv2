@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { TopHeader, RibbonNav } from './Navigation';
 import { ComingSoon } from './ComingSoon';
+import { QueueingGroupManager } from '.QueueingGroup.tsx'
 
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
@@ -8,7 +9,7 @@ export const DashboardLayout = () => {
   // Placeholder static data (eventually fetched via your NestJS API)
   const currentSession = {
     id: '20260323A001',
-    groupId: 'Tuesday Smashers',
+    groupId: 'TUD Badminton',
   };
 
   // Dynamically render the active view
