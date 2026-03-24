@@ -15,7 +15,9 @@ RUN NODE_OPTIONS="--max-old-space-size=2048" npm install
 COPY . .
 
 # Build the React application
-RUN npm run build
+#RUN npm run build
+RUN npm run build || (ls -R src && exit 1)
+
 
 # --- Stage 2: Production Server ---
 FROM nginx:alpine

@@ -20,7 +20,9 @@ RUN npx prisma generate
 COPY . .
 
 # Build the NestJS application
-RUN npm run build
+#RUN npm run build
+RUN npm run build || (ls -R src && exit 1)
+
 
 # --- Stage 2: Production ---
 FROM node:18-alpine
