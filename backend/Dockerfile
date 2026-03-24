@@ -1,8 +1,22 @@
 FROM node:20-slim
+
+# Install OpenSSL (required by Prisma)
 RUN apt-get update && apt-get install -y openssl
+
 WORKDIR /app
+
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install
+
+# Copy the rest of the application code
 COPY . .
+
+# Generate Prisma client and build the NestJS application
+RUN npx prisma generate
+RUN npm run build
+
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma generate && npm run build && npm run start:prod || (echo '!!! BACKEND CRASHED !!!' && sleep 3600)"]
+
+# Start the compiled production app
+CMD ["npm", "run", "start:prod"]
