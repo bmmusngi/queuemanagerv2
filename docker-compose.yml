@@ -15,7 +15,7 @@ services:
     ports:
       - "5432:5432"
 
-  # 2. NestJS Backend
+  # 2. NestJS Backend (Zombie Trap Version)
   backend:
     build:
       context: ./backend
@@ -30,7 +30,17 @@ services:
     depends_on:
       - db
 
-# Notice the frontend is completely gone for now!
+  # 3. React Frontend (Zombie Trap Version)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: badminton_queue_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000" 
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
