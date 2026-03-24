@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TopHeader, RibbonNav } from './Navigation';
 import { ComingSoon } from './ComingSoon';
-import { QueueingGroupManager } from '.QueueingGroup.tsx'
+import QueueingGroupManager from './QueueingGroup.tsx'
 
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
