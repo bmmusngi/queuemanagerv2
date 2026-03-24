@@ -1,51 +1,49 @@
-  version: '3.8'
-  
-  services:
-    # 1. PostgreSQL Database
-    db:
-      image: postgres:15-alpine
-      container_name: badminton_queue_db
-      restart: unless-stopped
-      environment:
-        POSTGRES_USER: queue_admin
-        POSTGRES_PASSWORD: super_secure_password_here
-        POSTGRES_DB: queue_manager
-      volumes:
-        - pgdata:/var/lib/postgresql/data
-      ports:
-        - "5432:5432" # Optional: Only map this if you want to inspect the DB locally via a tool like pgAdmin or DBeaver
-  
-    # 2. NestJS Backend
-    backend:
-      build:
-        context: ./backend
-        dockerfile: Dockerfile
-      container_name: badminton_queue_backend
-      restart: unless-stopped
-      ports:
-        - "3001:3001"
-      environment:
-        # This URL tells Prisma to look for the "db" container on port 5432
-        - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
-        - PORT=3001
-      depends_on:
-        - db
-  
-    # 3. React Frontend
-    frontend:
-      build:
-        context: ./frontend
-        dockerfile: Dockerfile
-      container_name: badminton_queue_frontend
-      restart: unless-stopped
-      ports:
-        # Maps your tablet/browser's port 3000 to the container's Nginx port 80
-        - "3000:80" 
-      depends_on:
-        - backend
-  
-  # Persistent storage for the database so you don't lose queue data on restarts
-  volumes:
-    - ./logs:/app/logs
-  
-    pgdata:
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: badminton_queue_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: queue_admin
+      POSTGRES_PASSWORD: super_secure_password_here
+      POSTGRES_DB: queue_manager
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # 2. NestJS Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: badminton_queue_backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # This connects Prisma directly to the 'db' container
+      - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
+      - PORT=3001
+    depends_on:
+      - db
+
+  # 3. React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: badminton_queue_frontend
+    restart: unless-stopped
+    ports:
+      # Maps your tablet's port 3000 to the container's Nginx port 80
+      - "3000:80" 
+    depends_on:
+      - backend
+
+# Persistent storage so your database survives container restarts
+volumes:
+  pgdata:
