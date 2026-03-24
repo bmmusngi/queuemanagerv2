@@ -7,10 +7,19 @@ export class QueueingGroupController {
   constructor(private readonly queueingGroupService: QueueingGroupService) {}
 
   // POST http://<YOUR_NAS_IP>:3001/queueing-groups
+  /*
   @Post()
   async createGroup(@Body() data: Prisma.QueueingGroupCreateInput) {
     return await this.queueingGroupService.createGroup(data);
   }
+  */
+    // We use 'any' here temporarily to bypass the strict relation check
+  async createGroup(data: any) {
+    return await prisma.queueingGroup.create({
+      data,
+    });
+  }
+
 
   // GET http://<YOUR_NAS_IP>:3001/queueing-groups
   @Get()

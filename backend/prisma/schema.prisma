@@ -36,8 +36,8 @@ model QueueingGroup {
   id          String    @id @default(uuid())
   name        String    // e.g., "Tuesday Smashers"
   
-  sportId     String
-  sport       Sport     @relation(fields: [sportId], references: [id])
+  sportId     String?
+  sport       Sport?     @relation(fields: [sportId], references: [id])
   
   // Registered members belonging to this specific group
   members     Member[]  @relation("GroupMembers")
