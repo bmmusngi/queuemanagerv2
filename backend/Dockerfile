@@ -21,7 +21,11 @@ COPY . .
 
 # Build the NestJS application
 #RUN npm run build
-RUN npm run build || (ls -R src && exit 1)
+#RUN npm run build || (ls -R src && exit 1)
+# This tells Docker: 
+# 1. Run the build and send all output (errors and all) to a file named 'build_debug.log'.
+# 2. IF it fails (||), then 'cat' (print) that file to the screen and exit with code 1.
+RUN npm run build > build_debug.log 2>&1 || (cat build_debug.log && exit 1)
 
 
 # --- Stage 2: Production ---
