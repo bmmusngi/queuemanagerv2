@@ -46,4 +46,6 @@ services:
 
 # Persistent storage for the database so you don't lose queue data on restarts
 volumes:
+  - ./logs:/app/logs
+
   pgdata:
