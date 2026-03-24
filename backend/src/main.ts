@@ -8,7 +8,7 @@ async function bootstrap() {
   // 1. Configure CORS (Cross-Origin Resource Sharing)
   // This allows your React frontend (running on a different port) to securely make requests to this backend.
   // THIS IS THE FIX:
-app.enableCros({
+app.enableCors({
   origin: '*', // For development, allow everything. 
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   preflightContinue: false,
