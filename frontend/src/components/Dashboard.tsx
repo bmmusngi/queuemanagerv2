@@ -21,7 +21,7 @@ export const DashboardLayout = () => {
       case 'history':
         return <ComingSoon title="Session Game History" />;
       case 'group':
-        return <ComingSoon title="Queueing Group Details" />;
+        return <QueueingGroupManager />;                            //QueueingGroup.tsx
       case 'reports':
         return <ComingSoon title="Player & Session Reports" />;
       case 'admin':
