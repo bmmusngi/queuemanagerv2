@@ -7,11 +7,13 @@ async function bootstrap() {
 
   // 1. Configure CORS (Cross-Origin Resource Sharing)
   // This allows your React frontend (running on a different port) to securely make requests to this backend.
-  app.enableCors({
-    origin: 'http://localhost:3000', // Update this to your React development port
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
-  });
+  // THIS IS THE FIX:
+app.enableCros({
+  origin: '*', // For development, allow everything. 
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+});
 
   // 2. Enable Global Validation
   // This turns on the class-validator decorators in your DTOs.
@@ -31,5 +33,7 @@ async function bootstrap() {
   const port = process.env.PORT || 3001;
   await app.listen(port);
   console.log(`🚀 Backend successfully running on: http://localhost:${port}/api`);
+  
+  await app.listen(3001);
 }
 bootstrap();
