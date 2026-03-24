@@ -1,4 +1,4 @@
-version: '3.8'
+  version: '3.8'
 
 services:
   # 1. PostgreSQL Database
@@ -13,7 +13,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432" # Optional: Only map this if you want to inspect the DB locally via a tool like pgAdmin or DBeaver
+      - "5432:5432"
 
   # 2. NestJS Backend
   backend:
@@ -24,8 +24,10 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
+    volumes:
+      # THIS IS THE FIX: Bind mounts go inside the service, not at the bottom
+      - ./logs:/app/logs
     environment:
-      # This URL tells Prisma to look for the "db" container on port 5432
       - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
       - PORT=3001
     depends_on:
@@ -39,13 +41,10 @@ services:
     container_name: badminton_queue_frontend
     restart: unless-stopped
     ports:
-      # Maps your tablet/browser's port 3000 to the container's Nginx port 80
       - "3000:80" 
     depends_on:
       - backend
 
-# Persistent storage for the database so you don't lose queue data on restarts
+# TOP-LEVEL VOLUMES: Only for named volumes
 volumes:
-  - ./logs:/app/logs
-
   pgdata:

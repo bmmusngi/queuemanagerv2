@@ -1,27 +1,20 @@
 # --- Stage 1: Build ---
 FROM node:20-slim AS builder
 
-
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (with memory limit for slim environment)
 RUN NODE_OPTIONS="--max-old-space-size=2048" npm install
-
 
 # Copy the rest of the application code
 COPY . .
 
-# Build the React application
-#RUN npm run build
-#RUN npm run build || (ls -R src && exit 1)
-# This tells Docker: 
-# 1. Run the build and send all output (errors and all) to a file named 'build_debug.log'.
-# 2. IF it fails (||), then 'cat' (print) that file to the screen and exit with code 1.
-#RUN npm run build > build_debug.log 2>&1 || (cat build_debug.log && exit 1)
-CMD ["sh", "-c", "npm run build > /app/logs/build.log 2>&1 && npm run start:prod"]
+# Build the React application using the "Capture and Scream" hack
+# If Vite/TypeScript fails, it prints the exact error to Portainer and stops.
+RUN npm run build > build_debug.log 2>&1 || (cat build_debug.log && exit 1)
 
 # --- Stage 2: Production Server ---
 FROM nginx:alpine

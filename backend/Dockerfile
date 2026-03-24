@@ -1,46 +1,21 @@
-# --- Stage 1: Build ---
-FROM node:20-slim AS builder
+FROM node:20-slim
+
+# Install OpenSSL for Prisma
 RUN apt-get update && apt-get install -y openssl
 
-
 WORKDIR /app
 
-# Copy package files and Prisma schema
 COPY package*.json ./
-COPY prisma ./prisma/
+RUN npm install
 
-# Install all dependencies (including dev dependencies for NestJS CLI)
-RUN NODE_OPTIONS="--max-old-space-size=2048" npm install
-
-
-# Generate Prisma Client
+# Copy everything else
+COPY . .
 RUN npx prisma generate
 
-# Copy the rest of the application code
-COPY . .
+# IMPORTANT: We DO NOT run 'npm run build' here.
+# Instead, we run it when the container starts so it can write to the /app/logs volume.
 
-# Build the NestJS application
-#RUN npm run build
-#RUN npm run build || (ls -R src && exit 1)
-# This tells Docker: 
-# 1. Run the build and send all output (errors and all) to a file named 'build_debug.log'.
-# 2. IF it fails (||), then 'cat' (print) that file to the screen and exit with code 1.
-#RUN npm run build > build_debug.log 2>&1 || (cat build_debug.log && exit 1)
-CMD ["sh", "-c", "npm run build > /app/logs/build.log 2>&1 && npm run start:prod"]
-
-# --- Stage 2: Production ---
-FROM node:18-alpine
-
-WORKDIR /app
-
-# Copy only the compiled output, package files, and Prisma folder from the builder
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
-
-# Expose the API port
 EXPOSE 3001
 
-# Run Prisma db push to ensure database schema is synced, then start the server
-CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
+# This command builds the app, saves the output to your NAS folder, and then starts the app
+CMD ["sh", "-c", "npm run build > /app/logs/build.log 2>&1 && npm run start:prod"]
