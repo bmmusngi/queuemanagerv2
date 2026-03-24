@@ -8,13 +8,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-# Copy everything else and generate Prisma
+# Copy everything else
 COPY . .
-RUN npx prisma generate
 
 EXPOSE 3001
 
-# THE ZOMBIE TRAP:
-# Try to build and start. If it fails (||), print a warning and sleep for 1 hour.
-# This keeps the container alive so you can read the logs in Portainer!
-CMD ["sh", "-c", "npm run build && npm run start:prod || (echo '!!! BUILD FAILED !!! Check errors above.' && sleep 3600)"]
+# THE ULTIMATE ZOMBIE TRAP:
+# We moved Prisma generation AND the build here. 
+CMD ["sh", "-c", "npx prisma generate && npm run build && npm run start:prod || (echo '!!! BACKEND CRASHED !!!' && sleep 3600)"]

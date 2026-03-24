@@ -24,26 +24,13 @@ services:
     restart: unless-stopped
     ports:
       - "3001:3001"
-    volumes:
-      - ./logs:/app/logs
     environment:
       - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
       - PORT=3001
     depends_on:
       - db
 
-  # 3. React Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: badminton_queue_frontend
-    restart: unless-stopped
-    ports:
-      - "3000:80" 
-    depends_on:
-      - backend
+# Notice the frontend is completely gone for now!
 
-# Persistent storage for the database
 volumes:
   pgdata:
