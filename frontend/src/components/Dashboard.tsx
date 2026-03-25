@@ -9,17 +9,17 @@ import ActiveSession from './ActiveSession';
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
 
-  // Placeholder static data (eventually fetched via your NestJS API)
-  const currentSession = {
-    id: '20260323A001',
-    groupId: 'TUD Badminton',
-  };
+  // NEW: State to track the live session info for the Header
+    const [sessionInfo, setSessionInfo] = useState({
+      id: '---',
+      groupName: '---'
+    });
 
   // Dynamically render the active view
   const renderContent = () => {
     switch (activeTab) {
       case 'session':
-        return <ActiveSession selectedGroupId={currentSession.groupId} />;
+        return <ActiveSession />;
       case 'members':
         return <MemberManager />;
       case 'history':
@@ -39,8 +39,8 @@ export const DashboardLayout = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Header */}
       <TopHeader 
-        sessionName={currentSession.id} 
-        groupId={currentSession.groupId} 
+        sessionName = { sessionInfo.id }
+        groupId = { sessionInfo.groupName } 
       />
 
       {/* Navigation Ribbon */}
@@ -53,7 +53,14 @@ export const DashboardLayout = () => {
       {/* The padding ensures it doesn't hug the tablet edges too tightly */}
       <main className="flex-grow p-6 overflow-y-auto">
         <div className="max-w-7xl mx-auto h-full">
-          {renderContent()}
+          {activeTab === 'session' ? (
+            // Pass the setter function down to the ActiveSession component
+            <ActiveSession onSessionUpdate={(info) => setSessionInfo(info)} />
+          ) : activeTab === 'members' ? (
+            <MemberManager />
+          ) : (
+            <ComingSoon title="Module" />
+          )}
         </div>
       </main>
     </div>
