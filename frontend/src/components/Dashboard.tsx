@@ -19,7 +19,7 @@ export const DashboardLayout = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'session':
-        return <ActiveSession />;
+        return <ActiveSession selectedGroupId={currentSession.groupId} />;
       case 'members':
         return <MemberManager />;
       case 'history':
@@ -50,12 +50,12 @@ export const DashboardLayout = () => {
       />
 
       {/* Main Content Area */}
- { /* THE FIX: Added pb-20 for that clean bottom margin */ }
- <main className="flex-grow p-6 overflow-y-auto pb-20"> 
-      <div className="max-w-7xl mx-auto h-full">
-        {renderContent()}
-      </div>
-    </main>
+      {/* The padding ensures it doesn't hug the tablet edges too tightly */}
+      <main className="flex-grow p-6 overflow-y-auto">
+        <div className="max-w-7xl mx-auto h-full">
+          {renderContent()}
+        </div>
+      </main>
     </div>
   );
 };
