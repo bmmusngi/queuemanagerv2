@@ -1,29 +1,31 @@
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { prisma } from './prisma';
 import { Prisma } from '@prisma/client';
 
+@Injectable()
 export class PlayerService {
   
-  // Create a single player for a session
+  // CREATE: Add a single player to the session
   async createPlayer(data: Prisma.PlayerUncheckedCreateInput) {
-    // If memberId is provided, playerStatus should inherently be 'MEMBER', otherwise 'WALKIN'
+    // If memberId is provided, playerStatus is 'MEMBER', otherwise 'WALKIN'
     const status = data.memberId ? 'MEMBER' : 'WALKIN';
 
     return await prisma.player.create({
       data: {
         ...data,
         playerStatus: status,
-        playingStatus: 'ACTIVE', // Defaulting to active upon creation
+        playingStatus: 'ACTIVE', 
       },
     });
   }
 
-  // Create players in bulk (useful for pre-registering a group for a session)
+  // CREATE: Bulk add players (e.g., checking in multiple members at once)
   async createPlayersBulk(data: Prisma.PlayerUncheckedCreateInput[]) {
-    // Map through and ensure proper playerStatus based on memberId presence
     const mappedData = data.map(player => ({
       ...player,
       playerStatus: player.memberId ? 'MEMBER' : 'WALKIN',
-      playingStatus: 'ACTIVE'
+      playingStatus: 'ACTIVE',
+      paymentStatus: 'UNPAID' // Ensuring default state for bulk imports
     }));
 
     return await prisma.player.createMany({
@@ -32,36 +34,55 @@ export class PlayerService {
     });
   }
 
-  // SOFT DELETE: Mark a player as inactive (e.g., they went home early)
-  async deactivatePlayer(id: string) {
-    return await prisma.player.update({
+  // SAFE DELETE: Only remove if they haven't played a game yet
+  async removePlayer(id: string) {
+    // 1. Check for existing game associations
+    const player = await prisma.player.findUnique({
       where: { id },
-      data: { playingStatus: 'INACTIVE' },
+      include: {
+        _count: {
+          select: { 
+            gamesAsTeamA: true, 
+            gamesAsTeamB: true 
+          }
+        }
+      }
     });
-  }
 
-  // HARD DELETE: Completely remove player entry from the session
-  /*
-  async deletePlayer(id: string) {
-    // Note: If you eventually uncomment this, you must also handle deleting 
-    // the related PlayerStatistics to avoid foreign key constraint errors.
+    if (!player) throw new BadRequestException("Player not found.");
+
+    // 2. The Guard: If they have games, stop the deletion
+    const gameCount = player._count.gamesAsTeamA + player._count.gamesAsTeamB;
+    if (gameCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete ${player.name}: they have ${gameCount} game(s) recorded. Use 'Deactivate' instead.`
+      );
+    }
+
+    // 3. Safe to remove
     return await prisma.player.delete({
       where: { id },
     });
   }
-  */
-  
-  
-    // READ: Get details of an individual player in a session
-  async getPlayerById(id: string) {
-    return await prisma.player.findUnique({
+
+  // SOFT DELETE: Toggle playing status (for players taking a break or done early)
+  async togglePlayingStatus(id: string, status: 'ACTIVE' | 'INACTIVE') {
+    return await prisma.player.update({
       where: { id },
-      // Including the linked member profile is often useful for the frontend
-      include: { member: true }, 
+      data: { playingStatus: status },
     });
   }
 
-  // UPDATE: Modify player details for a specific session
+  // READ: Get all players for a specific session
+  async getPlayersBySession(sessionId: string) {
+    return await prisma.player.findMany({
+      where: { sessionId },
+      include: { member: true }, // Ties back to their permanent profile
+      orderBy: { createdAt: 'asc' }
+    });
+  }
+
+  // UPDATE: Modify session-specific player details
   async updatePlayer(id: string, data: Prisma.PlayerUpdateInput) {
     return await prisma.player.update({
       where: { id },
@@ -69,15 +90,13 @@ export class PlayerService {
     });
   }
 
-  
-
-  // Update payment status (e.g., from UNPAID to PAID)
-  async updatePaymentStatus(id: string, paymentStatus: string, paymentMode?: string) {
+  // UPDATE: Payment Tracking
+  async updatePayment(id: string, status: string, mode?: string) {
     return await prisma.player.update({
       where: { id },
       data: { 
-        paymentStatus,
-        paymentMode 
+        paymentStatus: status,
+        paymentMode: mode 
       },
     });
   }
