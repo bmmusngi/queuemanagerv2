@@ -3,6 +3,7 @@ import { TopHeader, RibbonNav } from './Navigation';
 import { ComingSoon } from './ComingSoon';
 import QueueingGroupManager from './QueueingGroup';
 import MemberManager from './MemberManager';
+import ActiveSession from './ActiveSession';
 
 
 export const DashboardLayout = () => {
@@ -18,7 +19,7 @@ export const DashboardLayout = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'session':
-        return <ComingSoon title="Active Session Dashboard" />;
+        return <ActiveSession />;
       case 'members':
         return <MemberManager />;
       case 'history':
@@ -49,12 +50,12 @@ export const DashboardLayout = () => {
       />
 
       {/* Main Content Area */}
-      {/* The padding ensures it doesn't hug the tablet edges too tightly */}
-      <main className="flex-grow p-6 overflow-y-auto">
-        <div className="max-w-7xl mx-auto h-full">
-          {renderContent()}
-        </div>
-      </main>
+ { /* THE FIX: Added pb-20 for that clean bottom margin */ }
+ <main className="flex-grow p-6 overflow-y-auto pb-20"> 
+      <div className="max-w-7xl mx-auto h-full">
+        {renderContent()}
+      </div>
+    </main>
     </div>
   );
 };
