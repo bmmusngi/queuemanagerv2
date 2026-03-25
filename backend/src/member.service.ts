@@ -31,7 +31,7 @@ export class MemberService {
   async getMembersByGroup(groupId: string) {
     return await prisma.member.findMany({
       where: {
-        isActive: true,
+      //  isActive: true,   //removed to show all members for reactivation
         queueingGroups: {
           // Prisma: "Find members where SOME of their groups match this ID"
           some: { id: groupId }
