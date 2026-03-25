@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { TopHeader, RibbonNav } from './Navigation';
 import { ComingSoon } from './ComingSoon';
 import QueueingGroupManager from './QueueingGroup';
+import MemberManager from './MemberManager';
+
 
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
@@ -18,7 +20,7 @@ export const DashboardLayout = () => {
       case 'session':
         return <ComingSoon title="Active Session Dashboard" />;
       case 'members':
-        return <ComingSoon title="Group Members Directory" />;
+        return <MemberManager />;
       case 'history':
         return <ComingSoon title="Session Game History" />;
       case 'group':

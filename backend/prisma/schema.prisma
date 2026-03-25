@@ -44,7 +44,7 @@ model QueueingGroup {
   
   // Sessions hosted by this group
   sessions    Session[]
-  isActive    Boolean?  // to determine whether a queueing group is active or not
+  isActive    Boolean?  @default(true) // to determine whether a queueing group is active or not
   
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

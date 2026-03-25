@@ -1,24 +1,53 @@
+import { Injectable } from '@nestjs/common';
 import { prisma } from './prisma';
-import { Prisma } from '@prisma/client';
+import { CreateMemberDto, UpdateMemberDto } from './member.dto';
 
+@Injectable()
 export class MemberService {
   
-  // Create a single member
-  async createMember(data: Prisma.MemberCreateInput) {
+  // CREATE: Register a member and link them to their first group
+  async createMember(dto: CreateMemberDto) {
     return await prisma.member.create({
-      data,
+      data: {
+        name: dto.name,
+        levelWeight: dto.levelWeight,
+        gender: dto.gender,
+        queueingGroups: {
+          // This "connects" the member to the existing group ID
+          connect: [{ id: dto.groupId }] 
+        }
+      },
     });
   }
 
-  // Create members in bulk
-  async createMembersBulk(data: Prisma.MemberCreateManyInput[]) {
-    return await prisma.member.createMany({
-      data,
-      skipDuplicates: true, // Prevents failure if a duplicate sneaks into the batch
+  // BULK CREATE: Handles a list of players for a specific group
+  async createMembersBulk(dtos: CreateMemberDto[]) {
+    // For bulk, we'll iterate so we can handle the M:N connection properly
+    const creations = dtos.map(dto => this.createMember(dto));
+    return await Promise.all(creations);
+  }
+
+  // READ: Get members filtered by a specific group
+  async getMembersByGroup(groupId: string) {
+    return await prisma.member.findMany({
+      where: {
+        isActive: true,
+        queueingGroups: {
+          // Prisma: "Find members where SOME of their groups match this ID"
+          some: { id: groupId }
+        }
+      },
+      orderBy: { name: 'asc' }
     });
   }
 
-  // SOFT DELETE: Deactivate a member
+  async getActiveMembers() {
+    return await prisma.member.findMany({
+      where: { isActive: true },
+      include: { queueingGroups: true }
+    });
+  }
+
   async deactivateMember(id: string) {
     return await prisma.member.update({
       where: { id },
@@ -26,42 +55,10 @@ export class MemberService {
     });
   }
 
-  // HARD DELETE: Completely remove from database
-  /*
-  async deleteMember(id: string) {
-    return await prisma.member.delete({
-      where: { id },
-    });
-  }
-  */
-
-  // Fetch all active members
-  async getMembers() {
-    return await prisma.member.findMany({
-      //where: { isActive: true },
-    });
-  }
-  
-  // Fetch all active members
-  async getActiveMembers() {
-    return await prisma.member.findMany({
-      where: { isActive: true },
-    });
-  }
-  
-    // READ: Get details of an individual member
-  async getMemberById(id: string) {
-    return await prisma.member.findUnique({
-      where: { id },
-    });
-  }
-
-  // UPDATE: Modify member details (e.g., updating levelWeight or name)
-  async updateMember(id: string, data: Prisma.MemberUpdateInput) {
+  async updateMember(id: string, dto: UpdateMemberDto) {
     return await prisma.member.update({
       where: { id },
-      data,
+      data: dto,
     });
   }
-
 }

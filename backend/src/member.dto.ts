@@ -5,32 +5,26 @@ export class CreateMemberDto {
   name: string;
 
   @IsInt()
-  @Min(1) // Assuming levelWeight is a positive integer 
-  levelWeight: number;
+  @Min(1)
+  levelWeight: number; // 1 = Beginner, 2 = Intermediate, etc.
 
   @IsString()
   gender: string;
 
-  @IsOptional()
-  @IsString({ each: true })
-  queueingGroupIds?: string[]; // Optional: Add them to groups upon creation
+  @IsString()
+  groupId: string; // Required for initial registration
 }
 
 export class UpdateMemberDto {
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   name?: string;
 
-  @IsOptional()
-  @IsInt()
-  @Min(1)
+  @IsOptional() @IsInt() @Min(1)
   levelWeight?: number;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   gender?: string;
 
-  @IsOptional()
-  @IsBoolean()
+  @IsOptional() @IsBoolean()
   isActive?: boolean;
 }
