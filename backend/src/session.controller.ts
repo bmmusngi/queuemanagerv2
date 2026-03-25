@@ -8,6 +8,7 @@ export class SessionController {
 
   @Post()
   async create(@Body() createSessionDto: CreateSessionDto) {
+    // The error TS2345 happens here if the Service doesn't expect 'CreateSessionDto'
     return await this.sessionService.createSession(createSessionDto);
   }
   

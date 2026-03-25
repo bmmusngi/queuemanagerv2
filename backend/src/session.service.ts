@@ -6,7 +6,7 @@ import { CreateSessionDto } from './session.dto';
 @Injectable()
 export class SessionService {
   
-  // CREATE: Start a new session using the DTO
+  // This signature MUST match the Controller's call
   async createSession(dto: CreateSessionDto) {
     return await prisma.session.create({
       data: {
@@ -25,17 +25,13 @@ export class SessionService {
     });
   }
 
-  // READ: Get all active sessions
   async getActiveSessions() {
     return await prisma.session.findMany({
       where: { status: 'ACTIVE' },
-      include: {
-        queueingGroup: true,
-      }
+      include: { queueingGroup: true }
     });
   }
 
-  // READ: Get details of a specific session
   async getSessionById(id: string) {
     return await prisma.session.findUnique({
       where: { id },
@@ -47,7 +43,6 @@ export class SessionService {
     });
   }
 
-  // UPDATE: Modify session details
   async updateSession(id: string, data: Prisma.SessionUpdateInput) {
     return await prisma.session.update({
       where: { id },
@@ -55,7 +50,6 @@ export class SessionService {
     });
   }
 
-  // SOFT DELETE: Mark a session as cancelled
   async cancelSession(id: string) {
     return await prisma.session.update({
       where: { id },
@@ -63,11 +57,10 @@ export class SessionService {
     });
   }
   
-  // COMPLETE SESSION
   async endSession(id: string) {
     return await prisma.session.update({
       where: { id },
       data: { status: 'COMPLETED' }
     });
   }
-} // <--- Only ONE closing brace at the very end of the class
+}
