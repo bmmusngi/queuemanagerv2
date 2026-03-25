@@ -12,6 +12,11 @@ export class SessionController {
   async create(@Body() createSessionDto: CreateSessionDto) {
     return await this.sessionService.createSession(createSessionDto);
   }
+  
+  @Put(':id/end')
+  async end(@Param('id') id: string) {
+    return await this.sessionService.endSession(id);
+  }
 
   // GET /sessions (Fetches all active sessions to populate the dashboard)
   @Get()
