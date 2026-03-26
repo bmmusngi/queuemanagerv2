@@ -19,4 +19,10 @@ RUN npm run build
 EXPOSE 3001
 
 # The CMD now only handles the database sync and starting the app
-CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
+#CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
+
+# ... existing setup ...
+
+# THE ZOMBIE TRAP (UPGRADED):
+# Added a 5s sleep to ensure the network bridge is fully open before the handshake
+CMD ["sh", "-c", "sleep 5 && rm -rf dist && npx prisma generate && npx prisma db push && npm run build && npm run start:prod || (echo '!!! BACKEND CRASHED !!!' && sleep 3600)"]
