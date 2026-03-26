@@ -8,12 +8,14 @@ export default function ActiveSession({ selectedGroupId }) {
   
   // --- PLAYER & MODAL STATE ---
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
+  const [showDraftModal, setShowDraftModal] = useState(false);
   const [addPlayerTab, setAddPlayerTab] = useState('member'); // 'member' or 'walkin'
   const [sortBy, setSortBy] = useState('waitTime');
   
   // --- DATA STATES ---
   const [groups, setGroups] = useState([]);
   const [availableMembers, setAvailableMembers] = useState([]);
+  const [pendingGames, setPendingGames] = useState([]);
 
   // Stateful Mock Data (To allow testing Add/Remove)
   const [players, setPlayers] = useState([
@@ -52,7 +54,7 @@ export default function ActiveSession({ selectedGroupId }) {
       .then(res => res.json())
       .then(data => setGroups(data))
       .catch(err => console.error("Error loading groups:", err));
-  }, []);
+  }, [activeSession?.id]);
 
   // Fetch members for the session's group when opening the add player modal
   useEffect(() => {
