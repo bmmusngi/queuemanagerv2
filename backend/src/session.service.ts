@@ -15,13 +15,10 @@ export class SessionService {
   }
 */
 
-  // Note: We are using 'dto: CreateSessionDto' now!
   async createSession(dto: CreateSessionDto) {
-    // Generate ID: YYYYMMDD + First 4 of GroupID
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
     const sessionId = `${dateStr}${dto.groupId.substring(0, 4).toUpperCase()}`;
     
-    // Create the Session and its Courts in a single transaction
     return await prisma.session.create({
       data: {
         id: sessionId,

@@ -5,12 +5,18 @@ RUN apt-get update && apt-get install -y openssl
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+# Clean install
+RUN npm ci 
 
 COPY . .
 
+# Generate Prisma types first
+RUN npx prisma generate
+
+# BUILD HERE: This ensures the image only finishes if the code is correct
+RUN npm run build
+
 EXPOSE 3001
 
-# THE ZOMBIE TRAP (UPGRADED):
-# Added 'rm -rf dist' to guarantee a 100% clean slate for the NestJS compiler
-CMD ["sh", "-c", "rm -rf dist && npx prisma generate && npx prisma db push && npm run build && npm run start:prod || (echo '!!! BACKEND CRASHED !!!' && sleep 3600)"]
+# The CMD now only handles the database sync and starting the app
+CMD ["sh", "-c", "npx prisma db push && npm run start:prod"]
