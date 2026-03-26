@@ -17,13 +17,8 @@ export default function ActiveSession({ selectedGroupId }) {
   const [availableMembers, setAvailableMembers] = useState([]);
   const [pendingGames, setPendingGames] = useState([]);
 
-  // Stateful Mock Data (To allow testing Add/Remove)
-  const [players, setPlayers] = useState([
-    { id: '1', name: 'Joel (Coach)', level: 3, games: 2, waitTime: '15m', status: 'Available', isActive: true, isWalkin: false },
-    { id: '2', name: 'Maria Clara', level: 1, games: 1, waitTime: '5m', status: 'Playing', isActive: true, isWalkin: false },
-    { id: '3', name: 'Juan Dela Cruz', level: 2, games: 3, waitTime: '2m', status: 'Available', isActive: false, isWalkin: false },
-    { id: '4', name: 'Snorlax', level: 1, games: 0, waitTime: '45m', status: 'Available', isActive: true, isWalkin: true },
-  ]);
+  // Active players in the current session
+  const [players, setPlayers] = useState([]);
 
   // --- FORM STATES ---
   const [targetGroupId, setTargetGroupId] = useState(selectedGroupId || '');
@@ -48,6 +43,11 @@ export default function ActiveSession({ selectedGroupId }) {
           setPendingGames(pending);
         })
         .catch(err => console.error("Error loading games:", err));
+
+      fetch(`${API_BASE}/players/session/${activeSession.id}`)
+        .then(res => res.json())
+        .then(data => setPlayers(data))
+        .catch(err => console.error("Error loading players:", err));
     }
 
     fetch(`${API_BASE}/queueing-groups`)
@@ -67,21 +67,25 @@ export default function ActiveSession({ selectedGroupId }) {
   }, [showAddPlayerModal, activeSession?.groupId, activeSession?.id]);
 
   // --- ACTIONS ---
-  const handleStartSession = () => {
-    const sessionId = `${new Date().toISOString().split('T')[0].replace(/-/g, '')}${targetGroupId?.substring(0, 4).toUpperCase() || 'SES'}`;
-    setActiveSession({
-      id: sessionId,
-      groupId: targetGroupId,
-      venue: venue || 'Unnamed Venue',
-      courts: Array.from({ length: courtCount }).map((_, i) => ({
-        id: `c${i + 1}`,
-        name: `Court ${i + 1}`,
-        status: 'Available',
-        isActive: true,
-        game: null
-      }))
-    });
-    setShowCreateModal(false);
+  const handleStartSession = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupId: targetGroupId,
+          venue: venue || 'Unnamed Venue',
+          courtCount: courtCount
+        })
+      });
+      if (res.ok) {
+        const newSession = await res.json();
+        setActiveSession(newSession);
+        setShowCreateModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to start session:", err);
+    }
   };
 
   const handleEndSession = () => {
@@ -89,37 +93,50 @@ export default function ActiveSession({ selectedGroupId }) {
     setShowEndModal(false);
   };
 
-  const handleAddFromMember = (member) => {
-    const newPlayer = {
-      id: Date.now().toString(),
-      name: member.name,
-      level: member.levelWeight,
-      games: 0,
-      waitTime: '0m',
-      status: 'Available',
-      isActive: true,
-      isWalkin: false
-    };
-    setPlayers([...players, newPlayer]);
-    setShowAddPlayerModal(false);
+  const handleAddFromMember = async (member) => {
+    try {
+      const res = await fetch(`${API_BASE}/players`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSession.id,
+          memberId: member.id,
+          name: member.name,
+          levelWeight: member.levelWeight
+        })
+      });
+      if (res.ok) {
+        const newPlayer = await res.json();
+        setPlayers([...players, newPlayer]);
+        setShowAddPlayerModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to add player from member:", err);
+    }
   };
 
-  const handleAddWalkin = (e) => {
+  const handleAddWalkin = async (e) => {
     e.preventDefault();
     if (!walkinName) return;
-    const newPlayer = {
-      id: Date.now().toString(),
-      name: walkinName,
-      level: 1,
-      games: 0,
-      waitTime: '0m',
-      status: 'Available',
-      isActive: true,
-      isWalkin: true
-    };
-    setPlayers([...players, newPlayer]);
-    setWalkinName('');
-    setShowAddPlayerModal(false);
+    try {
+      const res = await fetch(`${API_BASE}/players`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSession.id,
+          name: walkinName,
+          levelWeight: 1
+        })
+      });
+      if (res.ok) {
+        const newPlayer = await res.json();
+        setPlayers([...players, newPlayer]);
+        setWalkinName('');
+        setShowAddPlayerModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to add walk-in player:", err);
+    }
   };
 
   const removePlayer = (id) => {
@@ -274,17 +291,17 @@ export default function ActiveSession({ selectedGroupId }) {
                     <span className="text-xs font-bold text-slate-800">{p.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {p.isWalkin && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
-                    <span className="text-[9px] font-black text-slate-300 italic">L{p.level}</span>
+                    {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
+                    <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                    <span>{p.games} Games</span>
-                    <span>{p.waitTime} Wait</span>
+                    <span>{p.gamesPlayed || 0} Games</span>
+                    <span>{p.waitTime || '0m'} Wait</span>
                   </div>
                   {/* SAFE DELETE BUTTON */}
-                  {p.games === 0 && p.status !== 'Playing' && (
+                  {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'Playing' && (
                     <button onClick={() => removePlayer(p.id)} className="opacity-0 group-hover:opacity-100 text-[8px] font-black text-red-500 hover:underline uppercase transition-opacity">Remove</button>
                   )}
                 </div>

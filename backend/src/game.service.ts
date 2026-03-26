@@ -4,9 +4,20 @@ import { Prisma } from '@prisma/client';
 export class GameService {
   
   // CREATE: Set up a new game in the queue (Defaults to 'PENDING' status)
-  async createGame(data: Prisma.GameUncheckedCreateInput) {
+  async createGame(data: any) {
+    // Extract team player IDs to handle Prisma's nested connection logic
+    const { teamA, teamB, ...gameDetails } = data;
+
     return await prisma.game.create({
-      data,
+      data: {
+        ...gameDetails,
+        teamA: {
+          connect: (teamA || []).map((id: string) => ({ id }))
+        },
+        teamB: {
+          connect: (teamB || []).map((id: string) => ({ id }))
+        }
+      },
       // Include the nested player relations when returning the created game
       include: {
         teamA: true,
