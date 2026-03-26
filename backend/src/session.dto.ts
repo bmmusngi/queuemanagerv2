@@ -1,15 +1,18 @@
-import { IsString, IsOptional, IsInt } from 'class-validator';
+import { IsString, IsInt, IsNotEmpty } from 'class-validator';
 
 export class CreateSessionDto {
   @IsString()
+  @IsNotEmpty()
   groupId: string;
 
   @IsString()
+  @IsNotEmpty()
   venue: string;
 
   @IsInt()
   courtCount: number;
 }
+
 
 export class UpdateSessionDto {
   @IsOptional()

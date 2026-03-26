@@ -15,27 +15,28 @@ export class SessionService {
   }
 */
 
-  async createSession(dto: CreateSessionDto) {
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const sessionId = `${dateStr}${dto.groupId.substring(0, 4).toUpperCase()}`;
-    
-    return await prisma.session.create({
-      data: {
-        id: sessionId,
-        venue: dto.venue,
-        queueingGroupId: dto.groupId,
-        status: 'ACTIVE',
-        courts: {
-          create: Array.from({ length: dto.courtCount }).map((_, i) => ({
-            name: `Court ${i + 1}`,
-            status: 'ACTIVE'
-          }))
-        }
-      },
-      include: { courts: true, queueingGroup: true }
-    });
-  }
-
+  // Update the signature to accept the DTO class directly
+async createSession(dto: CreateSessionDto) {
+  // Generate ID: YYYYMMDD + First 4 of GroupID
+  const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+  const sessionId = `${dateStr}${dto.groupId.substring(0, 4).toUpperCase()}`;
+  
+  return await prisma.session.create({
+    data: {
+      id: sessionId,
+      venue: dto.venue,
+      queueingGroupId: dto.groupId,
+      status: 'ACTIVE',
+      courts: {
+        create: Array.from({ length: dto.courtCount }).map((_, i) => ({
+          name: `Court ${i + 1}`,
+          status: 'ACTIVE'
+        }))
+      }
+    },
+    include: { courts: true, queueingGroup: true }
+  });
+}
 
   // READ: Get all active sessions
   async getActiveSessions() {
