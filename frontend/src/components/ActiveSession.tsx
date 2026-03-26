@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ActiveSession({ selectedGroupId }) {
+export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: string }) {
   // --- SESSION STATE ---
   const [activeSession, setActiveSession] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -199,7 +199,7 @@ export default function ActiveSession({ selectedGroupId }) {
         setPendingGames(pendingGames.filter(g => g.id !== gameId));
         
         // Update player statuses locally
-        const playingIds = [...updatedGame.teamA, ...updatedGame.teamB].map(p => p.id);
+        const playingIds = [...(updatedGame.teamA || []), ...(updatedGame.teamB || [])].map((p: any) => p.id);
         setPlayers(players.map(p => 
           playingIds.includes(p.id) 
             ? { ...p, playingStatus: 'PLAYING', gamesPlayed: (p.gamesPlayed || 0) + 1 } 
@@ -291,17 +291,17 @@ export default function ActiveSession({ selectedGroupId }) {
                     <span className="text-xs font-bold text-slate-800">{p.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>} {/* Use playerStatus */}
-                    <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span> {/* Use levelWeight */}
+                    {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
+                    <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                    <span>{p.gamesPlayed || 0} Games</span> {/* Use gamesPlayed */}
+                    <span>{p.gamesPlayed || 0} Games</span>
                     <span>{p.waitTime || '0m'} Wait</span>
                   </div>
                   {/* SAFE DELETE BUTTON */}
-                  {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && ( /* Use playingStatus */
+                  {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && (
                     <button onClick={() => removePlayer(p.id)} className="opacity-0 group-hover:opacity-100 text-[8px] font-black text-red-500 hover:underline uppercase transition-opacity">Remove</button>
                   )}
                 </div>
@@ -348,11 +348,11 @@ export default function ActiveSession({ selectedGroupId }) {
                 key={c.id} 
                 onDragOver={onDragOver} 
                 onDrop={(e) => onDrop(e, c.id)}
-                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.game ? 'border-blue-500' : 'border-slate-200'}`} {/* Check c.game for border color */}
+                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.game ? 'border-blue-500' : 'border-slate-200'}`}
               >
                 <div className="bg-slate-800 p-2.5 flex justify-between items-center">
                   <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
-                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>{c.game ? 'Playing' : c.status}</span> {/* Check c.game for status text and color */}
+                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>{c.game ? 'Playing' : c.status}</span>
                 </div>
                 <div className="p-6 text-center">
                   {c.game ? (
