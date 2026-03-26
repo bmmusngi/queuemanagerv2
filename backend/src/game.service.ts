@@ -68,6 +68,11 @@ export class GameService {
         courtId: courtId,
         startedAt: new Date(),
       },
+      include: { // Include team players and court details
+        teamA: true,
+        teamB: true,
+        court: true,
+      },
     });
   }
 

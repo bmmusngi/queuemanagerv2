@@ -202,7 +202,7 @@ export default function ActiveSession({ selectedGroupId }) {
         const playingIds = [...updatedGame.teamA, ...updatedGame.teamB].map(p => p.id);
         setPlayers(players.map(p => 
           playingIds.includes(p.id) 
-            ? { ...p, status: 'Playing', games: p.games + 1 } 
+            ? { ...p, playingStatus: 'PLAYING', gamesPlayed: (p.gamesPlayed || 0) + 1 } 
             : p
         ));
       }
@@ -284,24 +284,24 @@ export default function ActiveSession({ selectedGroupId }) {
           
           <div className="flex-1 space-y-2 overflow-y-auto pr-1">
             {players.map(p => (
-              <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group ${!p.isActive ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
+              <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group ${p.playingStatus === 'INACTIVE' ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
                 <div className="flex justify-between items-start mb-1">
                   <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${p.status === 'Playing' ? 'bg-blue-500 animate-pulse' : p.isActive ? 'bg-green-500' : 'bg-slate-300'}`} />
+                    <div className={`w-2 h-2 rounded-full ${p.playingStatus === 'PLAYING' ? 'bg-blue-500 animate-pulse' : p.playingStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-300'}`} />
                     <span className="text-xs font-bold text-slate-800">{p.name}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
-                    <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span>
+                    {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>} {/* Use playerStatus */}
+                    <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span> {/* Use levelWeight */}
                   </div>
                 </div>
                 <div className="flex justify-between items-center mt-2">
                   <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                    <span>{p.gamesPlayed || 0} Games</span>
+                    <span>{p.gamesPlayed || 0} Games</span> {/* Use gamesPlayed */}
                     <span>{p.waitTime || '0m'} Wait</span>
                   </div>
                   {/* SAFE DELETE BUTTON */}
-                  {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'Playing' && (
+                  {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && ( /* Use playingStatus */
                     <button onClick={() => removePlayer(p.id)} className="opacity-0 group-hover:opacity-100 text-[8px] font-black text-red-500 hover:underline uppercase transition-opacity">Remove</button>
                   )}
                 </div>
@@ -348,11 +348,11 @@ export default function ActiveSession({ selectedGroupId }) {
                 key={c.id} 
                 onDragOver={onDragOver} 
                 onDrop={(e) => onDrop(e, c.id)}
-                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.status === 'Playing' ? 'border-blue-500' : 'border-slate-200'}`}
+                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.game ? 'border-blue-500' : 'border-slate-200'}`} {/* Check c.game for border color */}
               >
                 <div className="bg-slate-800 p-2.5 flex justify-between items-center">
                   <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
-                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.status === 'Playing' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>{c.status}</span>
+                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>{c.game ? 'Playing' : c.status}</span> {/* Check c.game for status text and color */}
                 </div>
                 <div className="p-6 text-center">
                   {c.game ? (
@@ -418,7 +418,7 @@ export default function ActiveSession({ selectedGroupId }) {
               <div>
                 <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Team A</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {players.filter(p => p.status === 'Available' && !teamB.find(t => t.id === p.id)).map(p => (
+                  {players.filter(p => p.playingStatus === 'ACTIVE' && !teamB.find(t => t.id === p.id)).map(p => (
                     <button 
                       key={p.id} 
                       onClick={() => teamA.find(t => t.id === p.id) ? setTeamA(teamA.filter(t => t.id !== p.id)) : setTeamA([...teamA, p])}
@@ -433,7 +433,7 @@ export default function ActiveSession({ selectedGroupId }) {
               <div>
                 <h4 className="text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest">Team B</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {players.filter(p => p.status === 'Available' && !teamA.find(t => t.id === p.id)).map(p => (
+                  {players.filter(p => p.playingStatus === 'ACTIVE' && !teamA.find(t => t.id === p.id)).map(p => (
                     <button 
                       key={p.id} 
                       onClick={() => teamB.find(t => t.id === p.id) ? setTeamB(teamB.filter(t => t.id !== p.id)) : setTeamB([...teamB, p])}
