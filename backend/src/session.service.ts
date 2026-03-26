@@ -15,9 +15,12 @@ export class SessionService {
 */
 
   async createSession(data: { groupId: string;venue: string;courtCount: number }) {
-    // Generate ID: YYYYMMDD + First 4 of GroupID
-    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const sessionId = `${dateStr}${data.groupId.substring(0, 4).toUpperCase()}`;
+    // Generate ID: YYYYMMDD + HHMMSS + First 4 of GroupID
+    // Adding the time ensures uniqueness if multiple sessions are started for the same group on the same day.
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+    const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, ''); // HHMMSS
+    const sessionId = `${dateStr}${timeStr}${data.groupId.substring(0, 4).toUpperCase()}`;
     
     // Create the Session and its Courts in a single transaction
     return await prisma.session.create({
