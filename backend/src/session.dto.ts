@@ -1,21 +1,15 @@
-import { IsString, IsOptional, IsArray, IsInt, ValidateNested, ArrayMinSize } from 'class-validator';
+import { IsString, IsOptional, IsInt } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateSessionDto {
   @IsString()
-  id: string; // Your YYYYMMDDXXXXXX format
-
-  @IsString()
-  queueingGroupId: string;
+  groupId: string;
 
   @IsString()
   venue: string;
 
-  // Instead of passing raw court objects, the frontend just tells the API what to name them
-  @IsArray()
-  @IsString({ each: true })
-  @ArrayMinSize(1)
-  courtNames: string[]; // e.g., ["Court 1", "Court 2", "Center Court"]
+  @IsInt()
+  courtCount: number;
 }
 
 export class UpdateSessionDto {
