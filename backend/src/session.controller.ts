@@ -30,12 +30,6 @@ export class SessionController {
   async update(@Param('id') id: string, @Body() updateSessionDto: UpdateSessionDto) {
     return await this.sessionService.updateSession(id, updateSessionDto);
   }
-  
-  // PUT /session/:id/end Ends the session 
-  @Put(':id/end')
-  async end(@Param('id') id: string) {
-    return await this.sessionService.endSession(id);
-  }
 
   // DELETE /sessions/:id (Soft-deletes/Cancels the session)
   @Delete(':id')
