@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { prisma } from './prisma';
 import { Prisma } from '@prisma/client';
 
-@Injectable
+@Injectable()
 export class SessionService {
   
   // CREATE: Start a new session
