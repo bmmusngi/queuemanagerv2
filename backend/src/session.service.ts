@@ -15,20 +15,21 @@ export class SessionService {
   }
 */
 
-  async createSession(data: { groupId: string;venue: string;courtCount: number }) {
+  // Note: We are using 'dto: CreateSessionDto' now!
+  async createSession(dto: CreateSessionDto) {
     // Generate ID: YYYYMMDD + First 4 of GroupID
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const sessionId = `${dateStr}${data.groupId.substring(0, 4).toUpperCase()}`;
+    const sessionId = `${dateStr}${dto.groupId.substring(0, 4).toUpperCase()}`;
     
     // Create the Session and its Courts in a single transaction
     return await prisma.session.create({
       data: {
         id: sessionId,
-        venue: data.venue,
-        queueingGroupId: data.groupId,
+        venue: dto.venue,
+        queueingGroupId: dto.groupId,
         status: 'ACTIVE',
         courts: {
-          create: Array.from({ length: data.courtCount }).map((_, i) => ({
+          create: Array.from({ length: dto.courtCount }).map((_, i) => ({
             name: `Court ${i + 1}`,
             status: 'ACTIVE'
           }))
