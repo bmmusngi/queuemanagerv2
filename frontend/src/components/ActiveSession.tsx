@@ -11,6 +11,10 @@ export default function ActiveSession({ selectedGroupId }) {
   const [addPlayerTab, setAddPlayerTab] = useState('member'); // 'member' or 'walkin'
   const [sortBy, setSortBy] = useState('waitTime');
   
+  // --- DATA STATES ---
+  const [groups, setGroups] = useState([]);
+  const [availableMembers, setAvailableMembers] = useState([]);
+
   // Stateful Mock Data (To allow testing Add/Remove)
   const [players, setPlayers] = useState([
     { id: '1', name: 'Joel (Coach)', level: 3, games: 2, waitTime: '15m', status: 'Available', isActive: true, isWalkin: false },
@@ -19,24 +23,38 @@ export default function ActiveSession({ selectedGroupId }) {
     { id: '4', name: 'Snorlax', level: 1, games: 0, waitTime: '45m', status: 'Available', isActive: true, isWalkin: true },
   ]);
 
-  // Mock Members (Available in the Group but not in Session)
-  const mockAvailableMembers = [
-    { id: 'm1', name: 'Renz', levelWeight: 2, gender: 'Male' },
-    { id: 'm2', name: 'Yuuichi Jin', levelWeight: 3, gender: 'Male' },
-  ];
-
   // --- FORM STATES ---
+  const [targetGroupId, setTargetGroupId] = useState(selectedGroupId || '');
   const [venue, setVenue] = useState('');
   const [courtCount, setCourtCount] = useState(2);
   const [walkinName, setWalkinName] = useState('');
 
   const API_BASE = 'http://100.88.175.25:3001/api';
 
+  // Load groups on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/queueing-groups`)
+      .then(res => res.json())
+      .then(data => setGroups(data))
+      .catch(err => console.error("Error loading groups:", err));
+  }, []);
+
+  // Fetch members for the session's group when opening the add player modal
+  useEffect(() => {
+    if (showAddPlayerModal && activeSession?.groupId) {
+      fetch(`${API_BASE}/members?groupId=${activeSession.groupId}`)
+        .then(res => res.json())
+        .then(data => setAvailableMembers(data.filter((m: any) => m.isActive)))
+        .catch(err => console.error("Error loading members:", err));
+    }
+  }, [showAddPlayerModal, activeSession?.groupId]);
+
   // --- ACTIONS ---
   const handleStartSession = () => {
-    const sessionId = `${new Date().toISOString().split('T')[0].replace(/-/g, '')}${selectedGroupId?.substring(0, 4).toUpperCase() || 'SES'}`;
+    const sessionId = `${new Date().toISOString().split('T')[0].replace(/-/g, '')}${targetGroupId?.substring(0, 4).toUpperCase() || 'SES'}`;
     setActiveSession({
       id: sessionId,
+      groupId: targetGroupId,
       venue: venue || 'Unnamed Venue',
       courts: Array.from({ length: courtCount }).map((_, i) => ({
         id: `c${i + 1}`,
@@ -108,6 +126,12 @@ export default function ActiveSession({ selectedGroupId }) {
             <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl">
               <h3 className="text-xl font-black text-slate-800 mb-6 uppercase tracking-tight">Session Setup</h3>
               <div className="space-y-4">
+                <select value={targetGroupId} onChange={e => setTargetGroupId(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-sm">
+                  <option value="">Select Group...</option>
+                  {groups.map((g: any) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
                 <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Venue Name" className="w-full p-3 bg-slate-50 border rounded-xl font-bold" />
                 <input type="number" value={courtCount} onChange={e => setCourtCount(parseInt(e.target.value))} placeholder="Courts" className="w-full p-3 bg-slate-50 border rounded-xl font-bold" />
                 <div className="flex space-x-2 pt-4">
@@ -223,7 +247,7 @@ export default function ActiveSession({ selectedGroupId }) {
             <div className="p-6">
               {addPlayerTab === 'member' ? (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {mockAvailableMembers.map(m => (
+                  {availableMembers.map((m: any) => (
                     <button key={m.id} onClick={() => handleAddFromMember(m)} className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 group transition-all">
                       <span className="font-bold text-slate-700">{m.name}</span>
                       <span className="text-[9px] font-black bg-slate-100 text-slate-400 px-2 py-1 rounded group-hover:bg-blue-600 group-hover:text-white transition-colors uppercase">Check-in</span>
