@@ -28,11 +28,26 @@ export default function ActiveSession({ selectedGroupId }) {
   const [venue, setVenue] = useState('');
   const [courtCount, setCourtCount] = useState(2);
   const [walkinName, setWalkinName] = useState('');
+  
+  // Game Draft Form State
+  const [draftType, setDraftType] = useState('Doubles'); // Singles, Doubles, Triples
+  const [teamA, setTeamA] = useState([]);
+  const [teamB, setTeamB] = useState([]);
 
   const API_BASE = 'http://100.88.175.25:3001/api';
 
-  // Load groups on mount
+  // Load groups and pending games
   useEffect(() => {
+    if (activeSession?.id) {
+      fetch(`${API_BASE}/games/session/${activeSession.id}`)
+        .then(res => res.json())
+        .then(data => {
+          const pending = data.filter((g: any) => g.status === 'PENDING');
+          setPendingGames(pending);
+        })
+        .catch(err => console.error("Error loading games:", err));
+    }
+
     fetch(`${API_BASE}/queueing-groups`)
       .then(res => res.json())
       .then(data => setGroups(data))
@@ -47,7 +62,7 @@ export default function ActiveSession({ selectedGroupId }) {
         .then(data => setAvailableMembers(data.filter((m: any) => m.isActive)))
         .catch(err => console.error("Error loading members:", err));
     }
-  }, [showAddPlayerModal, activeSession?.groupId]);
+  }, [showAddPlayerModal, activeSession?.groupId, activeSession?.id]);
 
   // --- ACTIONS ---
   const handleStartSession = () => {
@@ -109,6 +124,74 @@ export default function ActiveSession({ selectedGroupId }) {
     setPlayers(players.filter(p => p.id !== id));
   };
 
+  // --- GAME DRAFTING & DND ---
+  const handleDraftGame = async () => {
+    const gameData = {
+      sessionId: activeSession.id,
+      type: draftType,
+      teamA: teamA.map(p => p.id),
+      teamB: teamB.map(p => p.id),
+      status: 'PENDING'
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/games`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gameData)
+      });
+      if (res.ok) {
+        const newGame = await res.json();
+        setPendingGames([...pendingGames, newGame]);
+        setTeamA([]);
+        setTeamB([]);
+        setShowDraftModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to draft game:", err);
+    }
+  };
+
+  const onDragStart = (e, gameId) => {
+    e.dataTransfer.setData("gameId", gameId);
+  };
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const onDrop = async (e, courtId) => {
+    const gameId = e.dataTransfer.getData("gameId");
+    
+    try {
+      const res = await fetch(`${API_BASE}/games/${gameId}/start`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courtId })
+      });
+
+      if (res.ok) {
+        const updatedGame = await res.json();
+        // Update local session courts to show the game
+        const updatedCourts = activeSession.courts.map(c => 
+          c.id === courtId ? { ...c, status: 'Playing', game: updatedGame } : c
+        );
+        setActiveSession({ ...activeSession, courts: updatedCourts });
+        setPendingGames(pendingGames.filter(g => g.id !== gameId));
+        
+        // Update player statuses locally
+        const playingIds = [...updatedGame.teamA, ...updatedGame.teamB].map(p => p.id);
+        setPlayers(players.map(p => 
+          playingIds.includes(p.id) 
+            ? { ...p, status: 'Playing', games: p.games + 1 } 
+            : p
+        ));
+      }
+    } catch (err) {
+      console.error("Failed to assign game to court:", err);
+    }
+  };
+
   // --- 1. EMPTY STATE ---
   if (!activeSession) {
     return (
@@ -159,7 +242,7 @@ export default function ActiveSession({ selectedGroupId }) {
           </div>
           <div className="flex space-x-2 border-l pl-6 border-slate-100">
             <button onClick={() => setShowAddPlayerModal(true)} className="text-[10px] font-black bg-blue-600 text-white px-4 py-2 rounded-lg uppercase tracking-wider shadow-sm">+ Add Player</button>
-            <button className="text-[10px] font-black bg-slate-100 text-slate-600 px-4 py-2 rounded-lg uppercase tracking-wider">Draft Game</button>
+            <button onClick={() => setShowDraftModal(true)} className="text-[10px] font-black bg-slate-100 text-slate-600 px-4 py-2 rounded-lg uppercase tracking-wider">Draft Game</button>
           </div>
         </div>
         <button onClick={() => setShowEndModal(true)} className="text-[10px] font-black bg-red-50 text-red-600 px-4 py-2 rounded-lg uppercase tracking-wider hover:bg-red-600 hover:text-white transition-all">End Session</button>
@@ -211,8 +294,26 @@ export default function ActiveSession({ selectedGroupId }) {
         {/* PENDING COLUMN */}
         <div className="w-80 flex-shrink-0 flex flex-col space-y-3">
           <h3 className="text-[10px] font-black text-slate-400 uppercase px-2">Pending Games</h3>
-          <div className="flex-1 space-y-3 bg-slate-100/30 rounded-2xl p-3 border-2 border-dashed border-slate-200 overflow-y-auto">
-            <div className="text-center py-10 text-slate-400 text-[10px] font-bold uppercase italic tracking-widest opacity-40">Drag players here</div>
+          <div className="flex-1 space-y-3 bg-slate-50/50 rounded-2xl p-3 border-2 border-dashed border-slate-200 overflow-y-auto">
+            {pendingGames.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-[10px] font-bold uppercase italic tracking-widest opacity-40">Draft a game to start</div>
+            ) : (
+              pendingGames.map(game => (
+                <div 
+                  key={game.id} 
+                  draggable 
+                  onDragStart={(e) => onDragStart(e, game.id)}
+                  className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors"
+                >
+                  <div className="text-[8px] font-black text-blue-600 uppercase mb-2">{game.type}</div>
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
+                    <span>{game.teamA?.map(p => p.name).join(' & ')}</span>
+                    <span className="text-slate-300 mx-2">VS</span>
+                    <span>{game.teamB?.map(p => p.name).join(' & ')}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -223,13 +324,24 @@ export default function ActiveSession({ selectedGroupId }) {
             <button className="text-[10px] font-black text-blue-600 uppercase">+ Add Court</button>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {activeSession.courts.map(c => (
-              <div key={c.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            {activeSession.courts.map((c: any) => (
+              <div 
+                key={c.id} 
+                onDragOver={onDragOver} 
+                onDrop={(e) => onDrop(e, c.id)}
+                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.status === 'Playing' ? 'border-blue-500' : 'border-slate-200'}`}
+              >
                 <div className="bg-slate-800 p-2.5 flex justify-between items-center">
                   <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
-                  <span className="text-[8px] font-bold bg-green-500 text-white px-2 py-0.5 rounded uppercase">{c.status}</span>
+                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.status === 'Playing' ? 'bg-blue-500 text-white' : 'bg-green-500 text-white'}`}>{c.status}</span>
                 </div>
-                <div className="p-8 text-center text-slate-300 text-[10px] font-black uppercase tracking-widest">Ready</div>
+                <div className="p-6 text-center">
+                  {c.game ? (
+                    <div className="text-[10px] font-black text-slate-700 uppercase">{c.game.teamA?.map(p => p.name).join(' & ')} <span className="text-slate-300 px-1">vs</span> {c.game.teamB?.map(p => p.name).join(' & ')}</div>
+                  ) : (
+                    <div className="text-slate-300 text-[10px] font-black uppercase tracking-widest">Ready</div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -265,6 +377,58 @@ export default function ActiveSession({ selectedGroupId }) {
                 </form>
               )}
               <button onClick={() => setShowAddPlayerModal(false)} className="w-full mt-4 text-[9px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAFT GAME MODAL */}
+      {showDraftModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h3 className="text-lg font-black text-slate-800 uppercase italic">Draft New Game</h3>
+              <select value={draftType} onChange={e => { setDraftType(e.target.value); setTeamA([]); setTeamB([]); }} className="p-2 bg-slate-50 rounded-lg text-xs font-bold border-none">
+                <option>Singles</option>
+                <option>Doubles</option>
+                <option>Triples</option>
+              </select>
+            </div>
+            <div className="p-6 grid grid-cols-2 gap-6">
+              {/* Team A Selection */}
+              <div>
+                <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Team A</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {players.filter(p => p.status === 'Available' && !teamB.find(t => t.id === p.id)).map(p => (
+                    <button 
+                      key={p.id} 
+                      onClick={() => teamA.find(t => t.id === p.id) ? setTeamA(teamA.filter(t => t.id !== p.id)) : setTeamA([...teamA, p])}
+                      className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${teamA.find(t => t.id === p.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Team B Selection */}
+              <div>
+                <h4 className="text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest">Team B</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {players.filter(p => p.status === 'Available' && !teamA.find(t => t.id === p.id)).map(p => (
+                    <button 
+                      key={p.id} 
+                      onClick={() => teamB.find(t => t.id === p.id) ? setTeamB(teamB.filter(t => t.id !== p.id)) : setTeamB([...teamB, p])}
+                      className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${teamB.find(t => t.id === p.id) ? 'bg-red-600 text-white border-red-600' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 flex space-x-3">
+              <button onClick={handleDraftGame} className="flex-1 py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Add to Pending</button>
+              <button onClick={() => setShowDraftModal(false)} className="px-8 py-4 bg-white text-slate-400 font-black rounded-2xl uppercase tracking-widest text-xs border border-slate-200">Cancel</button>
             </div>
           </div>
         </div>
