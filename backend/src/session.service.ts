@@ -1,9 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { prisma } from './prisma';
 import { Prisma } from '@prisma/client';
-import { CreateSessionDto } from './session.dto';
 
-@Injectable()
+@Injectable
 export class SessionService {
   
   // CREATE: Start a new session
@@ -15,24 +14,26 @@ export class SessionService {
   }
 */
 
-  async createSession(dto: CreateSessionDto) {
+  async createSession(data: { groupId: string;venue: string;courtCount: number }) {
+    // Generate ID: YYYYMMDD + First 4 of GroupID
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
-    const sessionId = `${dateStr}${dto.groupId.substring(0, 4).toUpperCase()}`;
+    const sessionId = `${dateStr}${data.groupId.substring(0, 4).toUpperCase()}`;
     
+    // Create the Session and its Courts in a single transaction
     return await prisma.session.create({
       data: {
         id: sessionId,
-        venue: dto.venue,
-        queueingGroupId: dto.groupId,
+        venue: data.venue,
+        queueingGroupId: data.groupId,
         status: 'ACTIVE',
         courts: {
-          create: Array.from({ length: dto.courtCount }).map((_, i) => ({
+          create: Array.from({ length: data.courtCount }).map((_, i) => ({
             name: `Court ${i + 1}`,
             status: 'ACTIVE'
           }))
         }
       },
-      include: { courts: true, queueingGroup: true }
+      include: { courts: true }
     });
   }
 
