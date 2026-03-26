@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { prisma } from './prisma';
 import { Prisma } from '@prisma/client';
+import { CreateSessionDto } from './session.dto';
 
 @Injectable()
 export class SessionService {
@@ -33,7 +34,7 @@ export class SessionService {
           }))
         }
       },
-      include: { courts: true }
+      include: { courts: true, queueingGroup: true }
     });
   }
 
