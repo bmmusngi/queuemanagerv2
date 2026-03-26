@@ -55,12 +55,20 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
 
   // --- ACTIONS ---
   const handleStartSession = async () => {
-    if (!setupGroupId || !venue) return alert("Please fill in Group and Venue!");
+    if (!setupGroupId || !venue) return alert("Please fill in all fields!");
 
+    // 1. Transform the data to match the DTO requirements
+    const selectedGroup = groups.find(g => g.id === setupGroupId);
+    const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const generatedId = `${dateStr}-${selectedGroup?.name.substring(0, 3).toUpperCase() || 'SES'}`;
+    const namesArray = Array.from({ length: courtCount }).map((_, i) => `Court ${i + 1}`);
+
+    // 2. The Payload exactly matches CreateSessionDto
     const payload = {
-      groupId: setupGroupId,
+      id: generatedId,
+      queueingGroupId: setupGroupId,
       venue: venue,
-      courtCount: courtCount
+      courtNames: namesArray
     };
 
     try {
@@ -71,18 +79,19 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
       });
 
       if (res.ok) {
-        const savedSession = await res.json();
+        const savedSession = await res.json(); 
         setActiveSession(savedSession);
         setShowCreateModal(false);
         
-        // Push ID to Dashboard Header
-        const selectedGroup = groups.find(g => g.id === setupGroupId);
         if (onSessionUpdate && selectedGroup) {
           onSessionUpdate({ id: savedSession.id, groupName: selectedGroup.name });
         }
+      } else {
+        alert("Failed to create session. Check backend logs.");
       }
     } catch (err) {
-      console.error("Failed to create session:", err);
+      console.error("API Error:", err);
+      alert("Failed to connect to backend");
     }
   };
 

@@ -14,7 +14,7 @@ export class SessionService {
     });
   }
 */
-
+/*
   async createSession(data: { groupId: string;venue: string;courtCount: number }) {
     // Generate ID: YYYYMMDD + First 4 of GroupID
     const dateStr = new Date().toISOString().split('T')[0].replace(/-/g, '');
@@ -37,6 +37,27 @@ export class SessionService {
       include: { courts: true, queueingGroup: true }
     });
   }
+*/
+  async createSession(dto: CreateSessionDto) {
+   
+    return await prisma.session.create({
+      data: {
+        id: dto.id,
+        venue: dto.venue,
+        // Maps the DTO's queueingGroupId to Prisma's foreign key
+        queueingGroupId: dto.queueingGroupId, 
+        status: 'ACTIVE',
+        courts: {
+          create: dto.courtNames.map((name: string) => ({
+            name: name,
+            status: 'ACTIVE'
+          }))
+        }
+      },
+      include: { courts: true, queueingGroup: true }
+    });
+  }
+
 
 
   // READ: Get all active sessions
