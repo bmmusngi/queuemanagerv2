@@ -18,4 +18,3 @@ EXPOSE 3001
 # We added 'npx prisma db push' to sync the new schema to your Postgres DB
 CMD ["sh", "-c", "npx prisma generate && npx prisma db push && npm run build && npm run start:prod || (echo '!!! BACKEND CRASHED !!!' && sleep 3600)"]
 
-//forcebuild
