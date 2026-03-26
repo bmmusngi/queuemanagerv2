@@ -14,6 +14,13 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    # --- PRO HEALTHCHECK ---
+    # Periodically checks if the Postgres engine is actually ready
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U queue_admin -d queue_manager"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   # 2. NestJS Backend
   backend:
@@ -25,11 +32,13 @@ services:
     ports:
       - "3001:3001"
     environment:
-      # This connects Prisma directly to the 'db' container
       - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
       - PORT=3001
+    # --- PRO DEPENDENCY ---
+    # Waits for the 'db' healthcheck to pass before starting
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   # 3. React Frontend
   frontend:
@@ -39,11 +48,10 @@ services:
     container_name: badminton_queue_frontend
     restart: unless-stopped
     ports:
-      # Maps your tablet's port 3000 to the container's Nginx port 80
       - "3000:80" 
     depends_on:
       - backend
 
-# Persistent storage so your database survives container restarts
+# Persistent storage
 volumes:
   pgdata:
