@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 
-// Added interface to prevent the TS "Exit Code 2" error
-interface ActiveSessionProps {
-  onSessionUpdate?: (info: { id: string; groupName: string }) => void;
-}
-
-export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
+export default function ActiveSession({ selectedGroupId }) {
   // --- SESSION STATE ---
-  const [activeSession, setActiveSession] = useState<any>(null);
-  const [groups, setGroups] = useState<any[]>([]); // Fetched from backend
+  const [activeSession, setActiveSession] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   
@@ -17,88 +11,52 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
   const [addPlayerTab, setAddPlayerTab] = useState('member'); // 'member' or 'walkin'
   const [sortBy, setSortBy] = useState('waitTime');
   
-  // Cleaned state for real usage
-  const [players, setPlayers] = useState<any[]>([]);
-  const [availableMembers, setAvailableMembers] = useState<any[]>([]);
+  // Stateful Mock Data (To allow testing Add/Remove)
+  const [players, setPlayers] = useState([
+    { id: '1', name: 'Joel (Coach)', level: 3, games: 2, waitTime: '15m', status: 'Available', isActive: true, isWalkin: false },
+    { id: '2', name: 'Maria Clara', level: 1, games: 1, waitTime: '5m', status: 'Playing', isActive: true, isWalkin: false },
+    { id: '3', name: 'Juan Dela Cruz', level: 2, games: 3, waitTime: '2m', status: 'Available', isActive: false, isWalkin: false },
+    { id: '4', name: 'Snorlax', level: 1, games: 0, waitTime: '45m', status: 'Available', isActive: true, isWalkin: true },
+  ]);
+
+  // Mock Members (Available in the Group but not in Session)
+  const mockAvailableMembers = [
+    { id: 'm1', name: 'Renz', levelWeight: 2, gender: 'Male' },
+    { id: 'm2', name: 'Yuuichi Jin', levelWeight: 3, gender: 'Male' },
+  ];
 
   // --- FORM STATES ---
-  const [setupGroupId, setSetupGroupId] = useState(''); // New state for dropdown
   const [venue, setVenue] = useState('');
   const [courtCount, setCourtCount] = useState(2);
   const [walkinName, setWalkinName] = useState('');
 
   const API_BASE = 'http://100.88.175.25:3001/api';
 
-  // --- 1. FETCH GROUPS (For Setup) ---
-  useEffect(() => {
-    if (showCreateModal) {
-      fetch(`${API_BASE}/queueing-groups`)
-        .then(res => res.json())
-        .then(data => setGroups(data))
-        .catch(console.error);
-    }
-  }, [showCreateModal]);
-
-  // --- 2. FETCH MEMBERS (For Check-in) ---
-  useEffect(() => {
-    if (showAddPlayerModal && addPlayerTab === 'member' && activeSession?.queueingGroupId) {
-      fetch(`${API_BASE}/members?groupId=${activeSession.queueingGroupId}`)
-        .then(res => res.json())
-        .then(data => {
-          // Filter out people already in the players array
-          const checkedInIds = players.map(p => p.memberId);
-          setAvailableMembers(data.filter((m: any) => !checkedInIds.includes(m.id)));
-        })
-        .catch(console.error);
-    }
-  }, [showAddPlayerModal, addPlayerTab, activeSession, players]);
-
   // --- ACTIONS ---
-  const handleStartSession = async () => {
-    if (!setupGroupId || !venue) return alert("Please fill in Group and Venue!");
-
-    const payload = {
-      groupId: setupGroupId,
-      venue: venue,
-      courtCount: courtCount
-    };
-
-    try {
-      const res = await fetch(`${API_BASE}/sessions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        const savedSession = await res.json();
-        setActiveSession(savedSession);
-        setShowCreateModal(false);
-        
-        // Push ID to Dashboard Header
-        const selectedGroup = groups.find(g => g.id === setupGroupId);
-        if (onSessionUpdate && selectedGroup) {
-          onSessionUpdate({ id: savedSession.id, groupName: selectedGroup.name });
-        }
-      }
-    } catch (err) {
-      console.error("Failed to create session:", err);
-    }
+  const handleStartSession = () => {
+    const sessionId = `${new Date().toISOString().split('T')[0].replace(/-/g, '')}${selectedGroupId?.substring(0, 4).toUpperCase() || 'SES'}`;
+    setActiveSession({
+      id: sessionId,
+      venue: venue || 'Unnamed Venue',
+      courts: Array.from({ length: courtCount }).map((_, i) => ({
+        id: `c${i + 1}`,
+        name: `Court ${i + 1}`,
+        status: 'Available',
+        isActive: true,
+        game: null
+      }))
+    });
+    setShowCreateModal(false);
   };
 
-  const handleEndSession = async () => {
-    if (activeSession) {
-      await fetch(`${API_BASE}/sessions/${activeSession.id}/end`, { method: 'PUT' });
-    }
+  const handleEndSession = () => {
     setActiveSession(null);
     setShowEndModal(false);
-    if (onSessionUpdate) onSessionUpdate({ id: '---', groupName: '---' });
   };
 
-  const handleAddFromMember = (member: any) => {
+  const handleAddFromMember = (member) => {
     const newPlayer = {
       id: Date.now().toString(),
-      memberId: member.id, // Keeping track of DB ID
       name: member.name,
       level: member.levelWeight,
       games: 0,
@@ -111,7 +69,7 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
     setShowAddPlayerModal(false);
   };
 
-  const handleAddWalkin = (e: React.FormEvent) => {
+  const handleAddWalkin = (e) => {
     e.preventDefault();
     if (!walkinName) return;
     const newPlayer = {
@@ -129,7 +87,7 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
     setShowAddPlayerModal(false);
   };
 
-  const removePlayer = (id: string) => {
+  const removePlayer = (id) => {
     setPlayers(players.filter(p => p.id !== id));
   };
 
@@ -150,19 +108,8 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
             <div className="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl">
               <h3 className="text-xl font-black text-slate-800 mb-6 uppercase tracking-tight">Session Setup</h3>
               <div className="space-y-4">
-                {/* NEW GROUP DROPDOWN */}
-                <select 
-                  value={setupGroupId} 
-                  onChange={e => setSetupGroupId(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none text-slate-700"
-                >
-                  <option value="">-- Select Group --</option>
-                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                </select>
-
-                <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Venue Name" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none" />
-                <input type="number" value={courtCount} onChange={e => setCourtCount(parseInt(e.target.value))} placeholder="Courts" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none" />
-                
+                <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Venue Name" className="w-full p-3 bg-slate-50 border rounded-xl font-bold" />
+                <input type="number" value={courtCount} onChange={e => setCourtCount(parseInt(e.target.value))} placeholder="Courts" className="w-full p-3 bg-slate-50 border rounded-xl font-bold" />
                 <div className="flex space-x-2 pt-4">
                   <button onClick={handleStartSession} className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-xs tracking-widest shadow-md">Go Live</button>
                   <button onClick={() => setShowCreateModal(false)} className="px-6 py-4 bg-slate-100 text-slate-500 font-black rounded-xl uppercase text-xs">Cancel</button>
@@ -210,9 +157,6 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
           </div>
           
           <div className="flex-1 space-y-2 overflow-y-auto pr-1">
-            {players.length === 0 && (
-               <div className="text-center py-6 text-slate-400 text-[10px] font-bold uppercase italic tracking-widest opacity-60">No players checked in</div>
-            )}
             {players.map(p => (
               <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group ${!p.isActive ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
                 <div className="flex justify-between items-start mb-1">
@@ -230,6 +174,7 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
                     <span>{p.games} Games</span>
                     <span>{p.waitTime} Wait</span>
                   </div>
+                  {/* SAFE DELETE BUTTON */}
                   {p.games === 0 && p.status !== 'Playing' && (
                     <button onClick={() => removePlayer(p.id)} className="opacity-0 group-hover:opacity-100 text-[8px] font-black text-red-500 hover:underline uppercase transition-opacity">Remove</button>
                   )}
@@ -250,11 +195,11 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
         {/* COURTS COLUMN */}
         <div className="flex-1 min-w-[450px] flex flex-col space-y-3">
           <div className="flex justify-between items-center px-2">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Courts ({activeSession.courts?.length || 0})</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Courts ({activeSession.courts.length})</h3>
             <button className="text-[10px] font-black text-blue-600 uppercase">+ Add Court</button>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {activeSession.courts?.map((c: any) => (
+            {activeSession.courts.map(c => (
               <div key={c.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="bg-slate-800 p-2.5 flex justify-between items-center">
                   <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
@@ -278,10 +223,7 @@ export default function ActiveSession({ onSessionUpdate }: ActiveSessionProps) {
             <div className="p-6">
               {addPlayerTab === 'member' ? (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {availableMembers.length === 0 && (
-                    <div className="text-center py-4 text-[10px] font-bold text-slate-400 uppercase italic tracking-widest">No members available</div>
-                  )}
-                  {availableMembers.map(m => (
+                  {mockAvailableMembers.map(m => (
                     <button key={m.id} onClick={() => handleAddFromMember(m)} className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 group transition-all">
                       <span className="font-bold text-slate-700">{m.name}</span>
                       <span className="text-[9px] font-black bg-slate-100 text-slate-400 px-2 py-1 rounded group-hover:bg-blue-600 group-hover:text-white transition-colors uppercase">Check-in</span>
