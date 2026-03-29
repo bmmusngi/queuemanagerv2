@@ -7,9 +7,9 @@ async function bootstrap() {
   // 1. Set the global prefix (Matches your current logs)
   app.setGlobalPrefix('api');
 
-  // 2. Enable CORS (Unlocks the gates for the tablet)
+  // 2. Enable CORS (Unlocks the gates for secure cross-origin requests)
   app.enableCors({
-    origin: '*',
+    origin: true, // Echoes the requesting origin - required for credentials: true with diverse funnel addresses
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
@@ -18,6 +18,6 @@ async function bootstrap() {
   const port = 3001;
   await app.listen(port);
   
-  console.log(`✅ Backend is live at: http://100.88.175.25:${port}/api`);
+  console.log(`✅ Backend is live at: https://shirostor.tailf23fe.ts.net:8459/api`);
 }
 bootstrap();
