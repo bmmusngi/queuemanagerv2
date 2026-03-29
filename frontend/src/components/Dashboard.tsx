@@ -8,20 +8,15 @@ import Admin from './Admin';
 
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
-
-  // Placeholder static data (eventually fetched via your NestJS API)
-  const currentSession = {
-    id: '20260323A001',
-    groupId: 'TUD Badminton',
-  };
+  const [globalSession, setGlobalSession] = useState<any>(null);
 
   // Dynamically render the active view
   const renderContent = () => {
     switch (activeTab) {
       case 'session':
-        return <ActiveSession selectedGroupId={currentSession.groupId} />;
+        return <ActiveSession onSessionUpdate={setGlobalSession} />;
       case 'members':
-        return <MemberManager />;
+        return <MemberManager preselectedGroupId={globalSession?.queueingGroupId} />;
       case 'history':
         return <ComingSoon title="Session Game History" />;
       case 'group':
@@ -39,8 +34,8 @@ export const DashboardLayout = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       {/* Top Header */}
       <TopHeader 
-        sessionName={currentSession.id} 
-        groupId={currentSession.groupId} 
+        sessionName={globalSession?.id} 
+        groupId={globalSession?.queueingGroupId} 
       />
 
       {/* Navigation Ribbon */}

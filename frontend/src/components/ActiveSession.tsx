@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: string }) {
+export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { selectedGroupId?: string, onSessionUpdate?: (session: any) => void }) {
   // --- SESSION STATE ---
-  const [activeSession, setActiveSession] = useState(null);
+  const [activeSession, setActiveSession] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
   
+  // Update parent dashboard whenever activeSession changes
+  useEffect(() => {
+    if (onSessionUpdate) {
+      onSessionUpdate(activeSession);
+    }
+  }, [activeSession, onSessionUpdate]);
+
   // --- PLAYER & MODAL STATE ---
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showDraftModal, setShowDraftModal] = useState(false);
