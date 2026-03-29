@@ -80,7 +80,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [teamA, setTeamA] = useState<any[]>([]);
   const [teamB, setTeamB] = useState<any[]>([]);
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
 
   // Toggle player status
   const togglePlayerStatus = async (id: string, currentStatus: string) => {

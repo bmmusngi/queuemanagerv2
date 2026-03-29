@@ -4,7 +4,7 @@ export default function GameHistoryTable({ sessionId }: { sessionId?: string }) 
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
 
   const fetchGames = () => {
     if (!sessionId) return;
