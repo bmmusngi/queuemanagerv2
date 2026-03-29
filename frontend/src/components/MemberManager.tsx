@@ -5,7 +5,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   const [selectedGroupId, setSelectedGroupId] = useState(preselectedGroupId || '');
   const [members, setMembers] = useState<any[]>([]);
   const [isBulkMode, setIsBulkMode] = useState(false);
-  
+
   // Edit State
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: '', gender: 'Male', levelWeight: 1 });
@@ -14,7 +14,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   const [singleMember, setSingleMember] = useState({ name: '', gender: 'Male', levelWeight: 1 });
   const [bulkText, setBulkText] = useState('');
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
 
   useEffect(() => {
     fetch(`${API_BASE}/queueing-groups`)
@@ -45,7 +45,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   const handleToggleStatus = async (id, currentStatus) => {
     const method = currentStatus ? 'DELETE' : 'PUT';
     const body = currentStatus ? null : JSON.stringify({ isActive: true });
-    
+
     const response = await fetch(`${API_BASE}/members/${id}`, {
       method: method,
       headers: { 'Content-Type': 'application/json' },
@@ -112,7 +112,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
       {/* Group Selector */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">Selected Group</label>
-        <select 
+        <select
           value={selectedGroupId}
           onChange={(e) => setSelectedGroupId(e.target.value)}
           className="w-full p-3 border-2 border-slate-100 rounded-lg bg-slate-50 font-bold text-slate-800 outline-none focus:border-blue-500"
@@ -124,7 +124,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
 
       {selectedGroupId && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          
+
           {/* LEFT: Registration Form */}
           <div className="lg:col-span-4 space-y-4">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 sticky top-6">
@@ -137,10 +137,10 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
 
               {!isBulkMode ? (
                 <form onSubmit={handleSingleSubmit} className="space-y-3">
-                  <input type="text" placeholder="Name" value={singleMember.name} onChange={e => setSingleMember({...singleMember, name: e.target.value})} className="w-full p-2 border rounded-md" required />
+                  <input type="text" placeholder="Name" value={singleMember.name} onChange={e => setSingleMember({ ...singleMember, name: e.target.value })} className="w-full p-2 border rounded-md" required />
                   <div className="grid grid-cols-2 gap-2">
-                    <select value={singleMember.gender} onChange={e => setSingleMember({...singleMember, gender: e.target.value})} className="p-2 border rounded-md text-sm"><option>Male</option><option>Female</option></select>
-                    <select value={singleMember.levelWeight} onChange={e => setSingleMember({...singleMember, levelWeight: parseInt(e.target.value)})} className="p-2 border rounded-md text-sm">
+                    <select value={singleMember.gender} onChange={e => setSingleMember({ ...singleMember, gender: e.target.value })} className="p-2 border rounded-md text-sm"><option>Male</option><option>Female</option></select>
+                    <select value={singleMember.levelWeight} onChange={e => setSingleMember({ ...singleMember, levelWeight: parseInt(e.target.value) })} className="p-2 border rounded-md text-sm">
                       <option value="1">Lvl 1</option><option value="2">Lvl 2</option><option value="3">Lvl 3</option>
                     </select>
                   </div>
@@ -161,7 +161,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
               <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between">
                 <span className="text-xs font-bold text-slate-500 uppercase">Registered Roster ({members.length})</span>
               </div>
-              
+
               {/* THE SCROLLABLE WRAPPER */}
               <div className="max-h-[600px] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[600px]">
@@ -180,8 +180,8 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
                           // EDIT MODE ROW
                           <td colSpan={4} className="p-4">
                             <form onSubmit={handleUpdate} className="flex gap-2 items-center">
-                              <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="flex-grow p-1 border rounded text-sm" />
-                              <select value={editForm.levelWeight} onChange={e => setEditForm({...editForm, levelWeight: parseInt(e.target.value)})} className="p-1 border rounded text-sm">
+                              <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="flex-grow p-1 border rounded text-sm" />
+                              <select value={editForm.levelWeight} onChange={e => setEditForm({ ...editForm, levelWeight: parseInt(e.target.value) })} className="p-1 border rounded text-sm">
                                 <option value="1">1</option><option value="2">2</option><option value="3">3</option>
                               </select>
                               <button type="submit" className="text-xs bg-green-600 text-white px-2 py-1 rounded">Save</button>
@@ -201,13 +201,13 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
                             <td className="p-4 text-right space-x-2">
                               {/* Add to Session (Disabled Placeholder) */}
                               <button disabled className="text-[10px] bg-slate-100 text-slate-400 px-2 py-1 rounded font-bold uppercase cursor-not-allowed">Queue</button>
-                              
+
                               {/* Update Button */}
                               <button onClick={() => startEdit(m)} className="text-[10px] text-blue-600 font-bold uppercase hover:underline">Edit</button>
-                              
+
                               {/* Toggle Active Button */}
-                              <button 
-                                onClick={() => handleToggleStatus(m.id, m.isActive)} 
+                              <button
+                                onClick={() => handleToggleStatus(m.id, m.isActive)}
                                 className={`text-[10px] font-bold uppercase hover:underline ${m.isActive ? 'text-red-500' : 'text-green-600'}`}
                               >
                                 {m.isActive ? 'Deactivate' : 'Reactivate'}

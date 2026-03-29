@@ -4,7 +4,7 @@ export default function GameHistoryTable({ sessionId }: { sessionId?: string }) 
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
 
   const fetchGames = () => {
     if (!sessionId) return;
@@ -57,7 +57,7 @@ export default function GameHistoryTable({ sessionId }: { sessionId?: string }) 
             <div className="text-xs font-bold text-slate-400 uppercase">Shuttles</div>
             <div className="font-black text-slate-800 text-lg">{totalShuttles}</div>
           </div>
-          <button 
+          <button
             onClick={fetchGames}
             disabled={loading}
             className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-bold text-xs uppercase hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50"
@@ -89,11 +89,11 @@ export default function GameHistoryTable({ sessionId }: { sessionId?: string }) 
             ) : (
               games.map(game => {
                 const endedTime = game.endedAt ? new Date(game.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Unknown';
-                
+
                 return (
                   <tr key={game.id} className="hover:bg-slate-50 transition-colors">
                     <td className="p-4 text-xs font-bold text-slate-500 whitespace-nowrap">{endedTime}</td>
-                    
+
                     {/* Team A Data */}
                     <td className="p-4">
                       <div className={`text-sm font-bold ${game.winner === 'TeamA' ? 'text-green-600' : 'text-slate-700'}`}>

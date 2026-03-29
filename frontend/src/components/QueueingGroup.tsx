@@ -7,7 +7,7 @@ export default function QueueingGroupManager() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Directly targeting your ASUSTOR backend over Tailscale
-  const API_URL = 'https://shirostor.tailf23fe.ts.net:8459/api/queueing-groups';
+  const API_URL = 'https://shirostor.tailf23fe.ts.net:3001/api/queueing-groups';
 
   // Fetch existing groups from the database
   const fetchGroups = async () => {
@@ -31,16 +31,16 @@ export default function QueueingGroupManager() {
   const handleCreateGroup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!groupName.trim()) return;
-    
+
     setIsLoading(true);
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         // Assuming your Prisma schema requires a 'name' field for the group
-        body: JSON.stringify({ name: groupName }) 
+        body: JSON.stringify({ name: groupName })
       });
-      
+
       if (response.ok) {
         setGroupName(''); // Clear the input
         fetchGroups();    // Refresh the list immediately
@@ -57,7 +57,7 @@ export default function QueueingGroupManager() {
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-sm mt-6">
       <h2 className="text-2xl font-bold text-slate-800 mb-6">Manage Queueing Groups</h2>
-      
+
       {/* Creation Form */}
       <form onSubmit={handleCreateGroup} className="flex gap-4 mb-8">
         <input
@@ -89,7 +89,7 @@ export default function QueueingGroupManager() {
             {groups.map((group: any) => (
               <li key={group.id} className="p-4 flex justify-between items-center bg-slate-50">
                 <span className="font-medium text-slate-800">{group.name}</span>
-                <span className="text-xs text-slate-500">ID: {group.id.slice(0,8)}...</span>
+                <span className="text-xs text-slate-500">ID: {group.id.slice(0, 8)}...</span>
               </li>
             ))}
           </ul>

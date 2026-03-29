@@ -5,7 +5,7 @@ export default function Reports() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
 
   // Load backend session history
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function Reports() {
       {/* Selector */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">Select a Session</label>
-        <select 
+        <select
           value={selectedSessionId}
           onChange={(e) => setSelectedSessionId(e.target.value)}
           className="w-full lg:w-1/2 p-3 border-2 border-slate-100 rounded-lg bg-slate-50 font-bold text-slate-800 outline-none focus:border-blue-500 transition-colors"

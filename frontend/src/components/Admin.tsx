@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
+const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
 
 export default function Admin() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -14,7 +14,7 @@ export default function Admin() {
       const res = await fetch(`${API_BASE}/admin/reset-db`, {
         method: 'DELETE',
       });
-      
+
       if (res.ok) {
         // Reload the entire application state on success
         window.location.reload();
@@ -36,14 +36,14 @@ export default function Admin() {
         <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">System Administration</h2>
         <p className="text-slate-500 text-sm font-medium mt-1">Manage core system properties and testing data.</p>
       </div>
-      
+
       <div className="p-8 flex-1">
         <div className="max-w-md border border-red-200 bg-red-50 rounded-2xl p-6">
           <h3 className="text-lg font-black text-red-700 uppercase tracking-tight mb-2">Danger Zone</h3>
           <p className="text-sm font-medium text-red-600 mb-6 font-semibold">
             This action will permanently purge all queueing groups, members, sessions, games, and players from the system. Only the foundational Sports data will be preserved.
           </p>
-          <button 
+          <button
             onClick={() => setShowConfirmModal(true)}
             className="w-full py-3 bg-white border-2 border-red-200 text-red-600 font-black rounded-xl uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-sm"
           >
@@ -60,18 +60,18 @@ export default function Admin() {
             </div>
             <h3 className="text-xl font-black text-slate-800 mb-2 uppercase italic">Are you absolutely sure?</h3>
             <p className="text-sm font-bold text-slate-500 mb-6">This will wipe all active structural data and cannot be undone.</p>
-            
+
             {error && <div className="mb-4 text-xs font-bold text-red-600 bg-red-50 p-2 rounded">{error}</div>}
 
-            <button 
-              onClick={handleResetDatabase} 
+            <button
+              onClick={handleResetDatabase}
               disabled={isDeleting}
               className={`w-full py-4 text-white font-black rounded-xl uppercase tracking-widest mb-2 shadow-lg shadow-red-100 transition-all ${isDeleting ? 'bg-slate-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'}`}
             >
               {isDeleting ? 'Nuking Database...' : 'Yes, Delete Everything'}
             </button>
-            <button 
-              onClick={() => setShowConfirmModal(false)} 
+            <button
+              onClick={() => setShowConfirmModal(false)}
               disabled={isDeleting}
               className="w-full py-4 text-[10px] font-black text-slate-400 uppercase hover:text-slate-600 transition-colors"
             >

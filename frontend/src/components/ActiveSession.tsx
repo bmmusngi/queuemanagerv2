@@ -5,7 +5,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
-  
+
   // Update parent dashboard whenever activeSession changes
   useEffect(() => {
     if (onSessionUpdate) {
@@ -20,7 +20,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [sortBy, setSortBy] = useState('idleTime');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [filterBy, setFilterBy] = useState('Active'); // All, Active, Available
-  
+
   // --- AUDIO / TTS STATE ---
   const [showAudioSettings, setShowAudioSettings] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
@@ -43,8 +43,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     };
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { 
-      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null; 
+    return () => {
+      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
 
@@ -52,12 +52,12 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   useEffect(() => {
     localStorage.setItem('badminton_tts_settings', JSON.stringify(ttsSettings));
   }, [ttsSettings]);
-  
+
   // --- COMPLETE GAME STATE ---
   const [completeGameData, setCompleteGameData] = useState<any>(null); // holds { courtId, game }
   const [shuttlesUsed, setShuttlesUsed] = useState(0);
   const [winner, setWinner] = useState('TeamA'); // 'TeamA' or 'TeamB'
-  
+
   // --- DATA STATES ---
   const [groups, setGroups] = useState<any[]>([]);
   const [availableMembers, setAvailableMembers] = useState<any[]>([]);
@@ -74,13 +74,13 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [walkinName, setWalkinName] = useState('');
   const [walkinLevel, setWalkinLevel] = useState(1);
   const [walkinGender, setWalkinGender] = useState('Male');
-  
+
   // Game Draft Form State
   const [draftType, setDraftType] = useState('Doubles'); // Singles, Doubles, Triples
   const [teamA, setTeamA] = useState<any[]>([]);
   const [teamB, setTeamB] = useState<any[]>([]);
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
 
   // Toggle player status
   const togglePlayerStatus = async (id: string, currentStatus: string) => {
@@ -101,25 +101,25 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   // Helper to find idle time
   const getIdleTime = (playerId: string) => {
-    const playerGames = allSessionGames.filter(g => 
-      g.status === 'COMPLETED' && 
+    const playerGames = allSessionGames.filter(g =>
+      g.status === 'COMPLETED' &&
       ([...(g.teamA || []), ...(g.teamB || [])].some((p: any) => p.id === playerId))
     );
     if (playerGames.length === 0) return Infinity; // Never played = most idle
-    
+
     const lastGame = playerGames.reduce((latest, current) => {
       const latestDate = new Date(latest.endedAt || 0).getTime();
       const currentDate = new Date(current.endedAt || 0).getTime();
       return currentDate > latestDate ? current : latest;
     });
-    
+
     return Date.now() - new Date(lastGame.endedAt).getTime();
   };
 
   // Derived filtered and sorted player list
   const processedPlayers = React.useMemo(() => {
     if (!Array.isArray(players)) return [];
-    
+
     // 1. Filter
     let list = [...players];
     if (filterBy === 'Active') {
@@ -143,7 +143,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       } else if (sortBy === 'level') {
         comparison = a.levelWeight - b.levelWeight;
       }
-      
+
       return sortDirection === 'desc' ? -comparison : comparison;
     });
 
@@ -307,7 +307,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   const onDrop = async (e: any, courtId: string) => {
     const gameId = e.dataTransfer.getData("gameId");
-    
+
     try {
       const res = await fetch(`${API_BASE}/games/${gameId}/start`, {
         method: 'PUT',
@@ -318,17 +318,17 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       if (res.ok) {
         const updatedGame = await res.json();
         // Update local session courts to show the game
-        const updatedCourts = activeSession.courts.map(c => 
+        const updatedCourts = activeSession.courts.map(c =>
           c.id === courtId ? { ...c, status: 'Playing', game: updatedGame } : c
         );
         setActiveSession({ ...activeSession, courts: updatedCourts });
         setPendingGames(pendingGames.filter(g => g.id !== gameId));
-        
+
         // Update player statuses locally
         const playingIds = [...(updatedGame.teamA || []), ...(updatedGame.teamB || [])].map((p: any) => p.id);
-        setPlayers(players.map(p => 
-          playingIds.includes(p.id) 
-            ? { ...p, playingStatus: 'PLAYING', gamesPlayed: (p.gamesPlayed || 0) + 1 } 
+        setPlayers(players.map(p =>
+          playingIds.includes(p.id)
+            ? { ...p, playingStatus: 'PLAYING', gamesPlayed: (p.gamesPlayed || 0) + 1 }
             : p
         ));
       }
@@ -348,18 +348,18 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       });
       if (res.ok) {
         // Free the court
-        const updatedCourts = activeSession.courts.map((c: any) => 
+        const updatedCourts = activeSession.courts.map((c: any) =>
           c.id === courtId ? { ...c, status: 'ACTIVE', game: null } : c
         );
         setActiveSession({ ...activeSession, courts: updatedCourts });
-        
+
         // Return players to queue (active so they can be drafted again)
         const playingIds = [...(game.teamA || []), ...(game.teamB || [])].map((p: any) => p.id);
-        const updatedPlayers = players.map((p: any) => 
+        const updatedPlayers = players.map((p: any) =>
           playingIds.includes(p.id) ? { ...p, playingStatus: 'ACTIVE' } : p
         );
         setPlayers(updatedPlayers);
-        
+
         setCompleteGameData(null);
         setShuttlesUsed(0);
         setWinner('TeamA');
@@ -371,14 +371,14 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   const announceMatchup = (courtName: string, game: any) => {
     if (!window.speechSynthesis) return;
-    
+
     // Stop any ongoing announcement
     window.speechSynthesis.cancel();
 
     // Use phoneticAlias if it exists in the future, otherwise default to name
     const teamNamesA = game.teamA?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team A';
     const teamNamesB = game.teamB?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team B';
-    
+
     // Build custom dialogue from template
     let dialogue = ttsSettings.template
       .replace(/{court}/g, courtName)
@@ -386,16 +386,16 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       .replace(/{teamB}/g, teamNamesB);
 
     const message = new SpeechSynthesisUtterance(dialogue);
-    
+
     // Apply Settings
     message.rate = ttsSettings.rate;
     message.pitch = ttsSettings.pitch;
-    
+
     if (ttsSettings.voiceUri) {
       const selectedVoice = availableVoices.find(v => v.voiceURI === ttsSettings.voiceUri);
       if (selectedVoice) message.voice = selectedVoice;
     }
-    
+
     window.speechSynthesis.speak(message);
   };
 
@@ -480,7 +480,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   // --- 2. ACTIVE BOARD ---
   return (
     <div className="flex flex-col h-full space-y-4 relative">
-      
+
       {/* SUB-HEADER */}
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
         <div className="flex items-center space-x-6">
@@ -501,7 +501,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
       {/* KANBAN */}
       <div className="flex flex-1 space-x-6 overflow-x-auto pb-8">
-        
+
         {/* PLAYER COLUMN */}
         <div className="w-72 flex-shrink-0 flex flex-col space-y-3">
           {/* Filtering Tabs */}
@@ -522,9 +522,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               {filterBy} List ({processedPlayers.length})
             </h3>
             <div className="flex items-center space-x-2">
-              <select 
-                value={sortBy} 
-                onChange={(e) => setSortBy(e.target.value)} 
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
                 className="text-[9px] font-bold bg-transparent text-slate-500 outline-none cursor-pointer"
               >
                 <option value="idleTime">Most Idle</option>
@@ -532,7 +532,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <option value="alphabetical">A to Z</option>
                 <option value="level">Skill Level</option>
               </select>
-              <button 
+              <button
                 onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
                 className="p-1 hover:bg-slate-100 rounded text-slate-400 transition-colors"
               >
@@ -540,17 +540,17 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               </button>
             </div>
           </div>
-          
+
           <div className="flex-1 space-y-2 overflow-y-auto pr-1">
             {processedPlayers.map(p => {
               const isPending = Array.isArray(pendingGames) && pendingGames.some(g => [...(g.teamA || []), ...(g.teamB || [])].some((player: any) => player.id === p.id));
               const idleMinutes = getIdleTime(p.id) === Infinity ? '-' : Math.floor(getIdleTime(p.id) / (1000 * 60));
-              
+
               return (
                 <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group relative ${p.playingStatus === 'INACTIVE' ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
                   {/* Status Indicator Bar */}
                   <div className={`absolute top-0 left-0 bottom-0 w-1 rounded-l-xl ${p.playingStatus === 'PLAYING' ? 'bg-blue-500' : p.playingStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-300'}`} />
-                  
+
                   <div className="flex justify-between items-start mb-1 pl-1">
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold text-slate-800">{p.name}</span>
@@ -570,7 +570,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
                     <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       {/* SLEEP/WAKE TOGGLE */}
-                      <button 
+                      <button
                         onClick={() => togglePlayerStatus(p.id, p.playingStatus)}
                         title={p.playingStatus === 'ACTIVE' ? "Mark as Sleeping" : "Mark as Active"}
                         className={`p-1 rounded hover:bg-slate-100 ${p.playingStatus === 'ACTIVE' ? 'text-slate-400' : 'text-blue-500'}`}
@@ -600,9 +600,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               <div className="text-center py-10 text-slate-400 text-[10px] font-bold uppercase italic tracking-widest opacity-40">Draft a game to start</div>
             ) : (
               pendingGames.map(game => (
-                <div 
-                  key={game.id} 
-                  draggable 
+                <div
+                  key={game.id}
+                  draggable
                   onDragStart={(e) => onDragStart(e, game.id)}
                   className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors"
                 >
@@ -626,9 +626,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {Array.isArray(activeSession?.courts) && activeSession.courts.map((c: any) => (
-              <div 
-                key={c.id} 
-                onDragOver={onDragOver} 
+              <div
+                key={c.id}
+                onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, c.id)}
                 className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.game ? 'border-blue-500' : 'border-slate-200'}`}
               >
@@ -643,14 +643,14 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                         {c.game.teamA?.map((p: any) => p.name).join(' & ')} <span className="text-slate-300 px-1">vs</span> {c.game.teamB?.map((p: any) => p.name).join(' & ')}
                       </div>
                       <div className="flex space-x-2">
-                        <button 
+                        <button
                           onClick={() => announceMatchup(c.name, c.game)}
                           title="Announce Matchup on Speaker"
                           className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border border-blue-100"
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
                         </button>
-                        <button 
+                        <button
                           onClick={() => { setCompleteGameData({ courtId: c.id, game: c.game }); setWinner('TeamA'); setShuttlesUsed(0); }}
                           title="Finish Game"
                           className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white px-4 py-2 rounded-full text-[10px] font-black uppercase transition-colors flex items-center justify-center shadow-sm border border-green-100"
@@ -683,9 +683,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                   {Array.isArray(availableMembers) && availableMembers.map((m: any) => {
                     const isAdded = players.some((p: any) => p.memberId === m.id);
                     return (
-                      <button 
-                        key={m.id} 
-                        onClick={() => !isAdded && handleAddFromMember(m)} 
+                      <button
+                        key={m.id}
+                        onClick={() => !isAdded && handleAddFromMember(m)}
                         disabled={isAdded}
                         className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all ${isAdded ? 'bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed' : 'border-slate-100 hover:border-blue-200 hover:bg-blue-50 group'}`}
                       >
@@ -731,8 +731,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Team A</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !teamB.find(t => t.id === p.id)).map(p => (
-                    <button 
-                      key={p.id} 
+                    <button
+                      key={p.id}
                       onClick={() => teamA.find(t => t.id === p.id) ? setTeamA(teamA.filter(t => t.id !== p.id)) : setTeamA([...teamA, p])}
                       className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${teamA.find(t => t.id === p.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
                     >
@@ -746,8 +746,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <h4 className="text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest">Team B</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !teamA.find(t => t.id === p.id)).map(p => (
-                    <button 
-                      key={p.id} 
+                    <button
+                      key={p.id}
                       onClick={() => teamB.find(t => t.id === p.id) ? setTeamB(teamB.filter(t => t.id !== p.id)) : setTeamB([...teamB, p])}
                       className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${teamB.find(t => t.id === p.id) ? 'bg-red-600 text-white border-red-600' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
                     >
@@ -757,7 +757,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 </div>
               </div>
             </div>
-            
+
             {/* Warnings Block */}
             {draftWarnings.length > 0 && (
               <div className="px-6 pb-2">
@@ -801,8 +801,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Winner</label>
                 <select value={winner} onChange={e => setWinner(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-green-500 transition-all">
-                  <option value="TeamA">🏆 Team A ({completeGameData.game?.teamA?.map((p:any)=>p.name).join(' & ')})</option>
-                  <option value="TeamB">🏆 Team B ({completeGameData.game?.teamB?.map((p:any)=>p.name).join(' & ')})</option>
+                  <option value="TeamA">🏆 Team A ({completeGameData.game?.teamA?.map((p: any) => p.name).join(' & ')})</option>
+                  <option value="TeamB">🏆 Team B ({completeGameData.game?.teamB?.map((p: any) => p.name).join(' & ')})</option>
                   <option value="Tie">🤝 Draw / Tie Match</option>
                   <option value="N/A">⚪ N/A (No Stats)</option>
                 </select>
@@ -832,14 +832,14 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* VOICE SELECTION */}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Voice Assistant</label>
-                <select 
-                  value={ttsSettings.voiceUri} 
-                  onChange={e => setTtsSettings({...ttsSettings, voiceUri: e.target.value})}
+                <select
+                  value={ttsSettings.voiceUri}
+                  onChange={e => setTtsSettings({ ...ttsSettings, voiceUri: e.target.value })}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
                 >
                   <option value="">System Default</option>
@@ -853,19 +853,19 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Speech Rate: {ttsSettings.rate}</label>
-                  <input 
-                    type="range" min="0.5" max="2" step="0.1" 
-                    value={ttsSettings.rate} 
-                    onChange={e => setTtsSettings({...ttsSettings, rate: parseFloat(e.target.value)})}
+                  <input
+                    type="range" min="0.5" max="2" step="0.1"
+                    value={ttsSettings.rate}
+                    onChange={e => setTtsSettings({ ...ttsSettings, rate: parseFloat(e.target.value) })}
                     className="w-full accent-blue-600"
                   />
                 </div>
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Voice Pitch: {ttsSettings.pitch}</label>
-                  <input 
-                    type="range" min="0" max="2" step="0.1" 
-                    value={ttsSettings.pitch} 
-                    onChange={e => setTtsSettings({...ttsSettings, pitch: parseFloat(e.target.value)})}
+                  <input
+                    type="range" min="0" max="2" step="0.1"
+                    value={ttsSettings.pitch}
+                    onChange={e => setTtsSettings({ ...ttsSettings, pitch: parseFloat(e.target.value) })}
                     className="w-full accent-blue-600"
                   />
                 </div>
@@ -874,9 +874,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               {/* TEMPLATE */}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Dialogue Template</label>
-                <textarea 
+                <textarea
                   value={ttsSettings.template}
-                  onChange={e => setTtsSettings({...ttsSettings, template: e.target.value})}
+                  onChange={e => setTtsSettings({ ...ttsSettings, template: e.target.value })}
                   rows={3}
                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
                   placeholder="Use {court}, {teamA}, and {teamB} as placeholders."
@@ -889,14 +889,14 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               </div>
 
               <div className="flex space-x-3 pt-4 border-t border-slate-50">
-                <button 
-                  onClick={() => announceMatchup("Court 1", { teamA: [{name: "Player A"}], teamB: [{name: "Player B"}] })} 
+                <button
+                  onClick={() => announceMatchup("Court 1", { teamA: [{ name: "Player A" }], teamB: [{ name: "Player B" }] })}
                   className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-slate-200"
                 >
                   Preview Audio
                 </button>
-                <button 
-                  onClick={() => setShowAudioSettings(false)} 
+                <button
+                  onClick={() => setShowAudioSettings(false)}
                   className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest shadow-md shadow-blue-100 hover:bg-blue-700 transition-all text-xs"
                 >
                   Save & Close

@@ -17,7 +17,7 @@ async function bootstrap() {
   // 3. Start the server (ONLY ONE LISTEN CALL)
   const port = 3001;
   await app.listen(port);
-  
-  console.log(`✅ Backend is live at: https://shirostor.tailf23fe.ts.net:8459/api`);
+
+  console.log(`✅ Backend is live at: https://shirostor.tailf23fe.ts.net:3001/api`);
 }
 bootstrap();
