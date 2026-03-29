@@ -25,6 +25,8 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
   const [venue, setVenue] = useState('');
   const [courtCount, setCourtCount] = useState(2);
   const [walkinName, setWalkinName] = useState('');
+  const [walkinLevel, setWalkinLevel] = useState(1);
+  const [walkinGender, setWalkinGender] = useState('Male');
   
   // Game Draft Form State
   const [draftType, setDraftType] = useState('Doubles'); // Singles, Doubles, Triples
@@ -58,13 +60,14 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
 
   // Fetch members for the session's group when opening the add player modal
   useEffect(() => {
-    if (showAddPlayerModal && activeSession?.groupId) {
-      fetch(`${API_BASE}/members?groupId=${activeSession.groupId}`)
+    const groupId = activeSession?.queueingGroupId || activeSession?.groupId;
+    if (showAddPlayerModal && groupId) {
+      fetch(`${API_BASE}/members?groupId=${groupId}`)
         .then(res => res.json())
-        .then(data => setAvailableMembers(data.filter((m: any) => m.isActive)))
+        .then(data => setAvailableMembers(Array.isArray(data) ? data.filter((m: any) => m.isActive) : []))
         .catch(err => console.error("Error loading members:", err));
     }
-  }, [showAddPlayerModal, activeSession?.groupId, activeSession?.id]);
+  }, [showAddPlayerModal, activeSession?.queueingGroupId, activeSession?.groupId, activeSession?.id]);
 
   // --- ACTIONS ---
   const handleStartSession = async () => {
@@ -102,7 +105,8 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
           sessionId: activeSession.id,
           memberId: member.id,
           name: member.name,
-          levelWeight: member.levelWeight
+          levelWeight: member.levelWeight,
+          gender: member.gender || 'Unknown'
         })
       });
       if (res.ok) {
@@ -125,13 +129,16 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
         body: JSON.stringify({
           sessionId: activeSession.id,
           name: walkinName,
-          levelWeight: 1
+          levelWeight: walkinLevel,
+          gender: walkinGender
         })
       });
       if (res.ok) {
         const newPlayer = await res.json();
         setPlayers([...players, newPlayer]);
         setWalkinName('');
+        setWalkinLevel(1);
+        setWalkinGender('Male');
         setShowAddPlayerModal(false);
       }
     } catch (err) {
@@ -418,8 +425,8 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
                 <form onSubmit={handleAddWalkin} className="space-y-4">
                   <input autoFocus value={walkinName} onChange={e => setWalkinName(e.target.value)} placeholder="Full Name" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                   <div className="flex space-x-2">
-                    <select className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"><option>Level 1</option><option>Level 2</option></select>
-                    <select className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"><option>Male</option><option>Female</option></select>
+                    <select value={walkinLevel} onChange={e => setWalkinLevel(parseInt(e.target.value))} className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"><option value={1}>Level 1</option><option value={2}>Level 2</option><option value={3}>Level 3</option><option value={4}>Level 4</option><option value={5}>Level 5</option></select>
+                    <select value={walkinGender} onChange={e => setWalkinGender(e.target.value)} className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"><option>Male</option><option>Female</option></select>
                   </div>
                   <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-100">Add to Queue</button>
                 </form>
