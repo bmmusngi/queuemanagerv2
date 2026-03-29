@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
+const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
 
 export default function Admin() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);

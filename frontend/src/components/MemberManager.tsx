@@ -14,7 +14,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   const [singleMember, setSingleMember] = useState({ name: '', gender: 'Male', levelWeight: 1 });
   const [bulkText, setBulkText] = useState('');
 
-  const API_BASE = 'https://shirostor.tailf23fe.ts.net:3001/api';
+  const API_BASE = 'https://shirostor.tailf23fe.ts.net:8459/api';
 
   useEffect(() => {
     fetch(`${API_BASE}/queueing-groups`)
