@@ -10,6 +10,15 @@ export class CreateSessionDto {
 
   @IsInt()
   courtCount: number;
+
+  @IsString()
+  paymentScheme: string; // "FIXED" or "GAME"
+
+  @IsOptional()
+  baseFee?: number;
+
+  @IsOptional()
+  gameFee?: number;
 }
 
 export class UpdateSessionDto {
@@ -20,6 +29,16 @@ export class UpdateSessionDto {
   @IsOptional()
   @IsString()
   status?: string; // e.g., "COMPLETED", "CANCELLED"
+
+  @IsOptional()
+  @IsString()
+  paymentScheme?: string;
+
+  @IsOptional()
+  baseFee?: number;
+
+  @IsOptional()
+  gameFee?: number;
 }
 
 // DTO for adding a player to a session (handles both Members and Walk-ins)

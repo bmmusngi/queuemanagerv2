@@ -31,4 +31,9 @@ export class PlayerController {
     const { syncMember, ...updateData } = data;
     return await this.playerService.updatePlayer(id, updateData, syncMember);
   }
+
+  @Put(':id/payment')
+  async updatePayment(@Param('id') id: string, @Body('status') status: string, @Body('mode') mode: string) {
+    return await this.playerService.updatePayment(id, status, mode);
+  }
 }

@@ -64,6 +64,10 @@ model Session {                       //Queueing Session
   players         Player[]
   games           Game[]
   playerStats     PlayerStatistics[]
+
+  paymentScheme   String?            @default("FIXED") // FIXED, GAME
+  baseFee         Float?             @default(0)
+  gameFee         Float?             @default(0)
   
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt

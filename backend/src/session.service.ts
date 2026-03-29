@@ -14,7 +14,14 @@ export class SessionService {
   }
 */
 
-  async createSession(data: { groupId: string;venue: string;courtCount: number }) {
+  async createSession(data: { 
+    groupId: string; 
+    venue: string; 
+    courtCount: number;
+    paymentScheme: string;
+    baseFee?: number;
+    gameFee?: number;
+  }) {
     // Generate ID: YYYYMMDD + HHMMSS + First 4 of GroupID
     // Adding the time ensures uniqueness if multiple sessions are started for the same group on the same day.
     const now = new Date();
@@ -29,6 +36,9 @@ export class SessionService {
         venue: data.venue,
         queueingGroupId: data.groupId,
         status: 'ACTIVE',
+        paymentScheme: data.paymentScheme,
+        baseFee: data.baseFee || 0,
+        gameFee: data.gameFee || 0,
         courts: {
           create: Array.from({ length: data.courtCount }).map((_, i) => ({
             name: `Court ${i + 1}`,

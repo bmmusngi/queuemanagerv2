@@ -68,12 +68,16 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [players, setPlayers] = useState<any[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [editingPlayer, setEditingPlayer] = useState<any>(null);
+  const [settlingPlayer, setSettlingPlayer] = useState<any>(null);
   const [syncMember, setSyncMember] = useState(false);
 
   // --- FORM STATES ---
   const [targetGroupId, setTargetGroupId] = useState(selectedGroupId || '');
   const [venue, setVenue] = useState('');
   const [courtCount, setCourtCount] = useState(2);
+  const [paymentScheme, setPaymentScheme] = useState<'FIXED' | 'GAME' | null>(null);
+  const [baseFee, setBaseFee] = useState<number>(0);
+  const [gameFee, setGameFee] = useState<number>(0);
   const [walkinName, setWalkinName] = useState('');
   const [walkinLevel, setWalkinLevel] = useState(1);
   const [walkinGender, setWalkinGender] = useState('Male');
@@ -129,6 +133,45 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     }
   };
 
+  const handleUpdateFinancials = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/sessions/${activeSession.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paymentScheme,
+          baseFee,
+          gameFee
+        })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setActiveSession(updated);
+        // showFinancialsModal is already true, we can keep it open or close it
+        // Let's just update and show a small confirmation if needed, but for now, just sync
+      }
+    } catch (err) {
+      console.error("Failed to update financials:", err);
+    }
+  };
+
+  const handleUpdatePayment = async (playerId: string, status: string, mode: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/players/${playerId}/payment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, mode })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPlayers(players.map(p => p.id === playerId ? { ...p, ...updated } : p));
+        setSettlingPlayer(null);
+      }
+    } catch (err) {
+      console.error("Failed to update payment:", err);
+    }
+  };
+
   // Helper to find idle time
   const getIdleTime = (playerId: string) => {
     const playerGames = allSessionGames.filter(g =>
@@ -180,6 +223,32 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     return list;
   }, [players, filterBy, sortBy, sortDirection, allSessionGames]);
 
+  // Financial Metrics
+  const financials = React.useMemo(() => {
+    let collected = 0;
+    let outstanding = 0;
+    const breakdown = { GCash: 0, Cash: 0, QRPH: 0 };
+
+    players.forEach(p => {
+      const amount = activeSession?.paymentScheme === 'GAME'
+        ? (activeSession.baseFee + (activeSession.gameFee * (p.gamesPlayed || 0)))
+        : (activeSession?.baseFee || 0);
+
+      if (p.paymentStatus === 'PAID') {
+        collected += amount;
+        if (p.paymentMode === 'GCash') breakdown.GCash += amount;
+        if (p.paymentMode === 'Cash') breakdown.Cash += amount;
+        if (p.paymentMode === 'QRPH') breakdown.QRPH += amount;
+      } else {
+        outstanding += amount;
+      }
+    });
+
+    return { collected, outstanding, breakdown };
+  }, [players, activeSession]);
+
+  const [showFinancialsModal, setShowFinancialsModal] = useState(false);
+
   // Load groups and pending games
   useEffect(() => {
     if (activeSession?.id) {
@@ -226,7 +295,10 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
         body: JSON.stringify({
           groupId: targetGroupId,
           venue: venue || 'Unnamed Venue',
-          courtCount: courtCount
+          courtCount: courtCount,
+          paymentScheme,
+          baseFee,
+          gameFee
         })
       });
       if (res.ok) {
@@ -499,8 +571,55 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 </select>
                 <input value={venue} onChange={e => setVenue(e.target.value)} placeholder="Venue Name" className="w-full p-3 bg-slate-50 border rounded-xl font-bold" />
                 <input type="number" value={courtCount} onChange={e => setCourtCount(parseInt(e.target.value))} placeholder="Courts" className="w-full p-3 bg-slate-50 border rounded-xl font-bold" />
-                <div className="flex space-x-2 pt-4">
-                  <button onClick={handleStartSession} className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase text-xs tracking-widest shadow-md">Go Live</button>
+                
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Payment Scheme (Required)</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      type="button" 
+                      onClick={() => setPaymentScheme('FIXED')}
+                      className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${paymentScheme === 'FIXED' ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                    >
+                      Fixed Fee
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setPaymentScheme('GAME')}
+                      className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${paymentScheme === 'GAME' ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                    >
+                      Game Fee
+                    </button>
+                  </div>
+
+                  {paymentScheme === 'FIXED' && (
+                    <div className="animate-in slide-in-from-top-2 duration-200">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Session Fee (PHP)</label>
+                      <input type="number" value={baseFee} onChange={e => setBaseFee(parseInt(e.target.value) || 0)} className="w-full p-3 bg-blue-50/30 border border-blue-100 rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                  )}
+
+                  {paymentScheme === 'GAME' && (
+                    <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Entry/Court Fee (PHP)</label>
+                        <input type="number" value={baseFee} onChange={e => setBaseFee(parseInt(e.target.value) || 0)} className="w-full p-3 bg-blue-50/30 border border-blue-100 rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Fee per Game (PHP)</label>
+                        <input type="number" value={gameFee} onChange={e => setGameFee(parseInt(e.target.value) || 0)} className="w-full p-3 bg-blue-50/30 border border-blue-100 rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex space-x-2 pt-4 border-t border-slate-50">
+                  <button 
+                    onClick={handleStartSession} 
+                    disabled={!targetGroupId || !paymentScheme}
+                    className={`flex-1 py-4 font-black rounded-xl uppercase text-xs tracking-widest shadow-md transition-all ${(!targetGroupId || !paymentScheme) ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-blue-600 text-white hover:bg-blue-700'}`}
+                  >
+                    Go Live
+                  </button>
                   <button onClick={() => setShowCreateModal(false)} className="px-6 py-4 bg-slate-100 text-slate-500 font-black rounded-xl uppercase text-xs">Cancel</button>
                 </div>
               </div>
@@ -527,6 +646,10 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
             <button onClick={() => setShowDraftModal(true)} className="text-[10px] font-black bg-slate-100 text-slate-600 px-4 py-2 rounded-lg uppercase tracking-wider">Draft Game</button>
             <button onClick={() => setShowAudioSettings(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all border border-slate-100" title="Audio Settings">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+            </button>
+            <button onClick={() => setShowFinancialsModal(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-green-500 hover:bg-green-50 transition-all border border-slate-100 flex items-center gap-2" title="Financial Settings">
+              <span className="text-[10px] font-black text-slate-600">₱{financials.collected}</span>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
             </button>
           </div>
         </div>
@@ -589,6 +712,14 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                     <div className="flex items-center space-x-2">
                       <span className="text-xs font-bold text-slate-800">{p.name}</span>
                       {isPending && <span className="text-[7px] font-black bg-yellow-100 text-yellow-700 px-1 rounded uppercase tracking-tighter">Pending</span>}
+                      {p.playingStatus === 'INACTIVE' && (
+                        <button 
+                          onClick={() => setSettlingPlayer(p)}
+                          className={`text-[7px] font-black px-1 rounded uppercase tracking-tighter transition-all ${p.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700 animate-pulse'}`}
+                        >
+                          {p.paymentStatus === 'PAID' ? `Paid (${p.paymentMode})` : 'Unpaid'}
+                        </button>
+                      )}
                     </div>
                     <div className="flex items-center space-x-2">
                       {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
@@ -1035,6 +1166,171 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* SETTLEMENT MODAL */}
+      {settlingPlayer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-900 p-6 text-white">
+              <h3 className="text-sm font-black uppercase tracking-widest italic">Settle Payment</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1">{settlingPlayer.name}</p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Total Amount Due</span>
+                <span className="text-3xl font-black text-slate-900">
+                  PHP {activeSession.paymentScheme === 'GAME' 
+                    ? (activeSession.baseFee + (activeSession.gameFee * settlingPlayer.gamesPlayed)) 
+                    : activeSession.baseFee}
+                </span>
+                {activeSession.paymentScheme === 'GAME' && (
+                  <span className="text-[9px] font-bold text-slate-400 block mt-1 uppercase tracking-tighter">
+                    {activeSession.baseFee} (Base) + ({activeSession.gameFee} x {settlingPlayer.gamesPlayed} games)
+                  </span>
+                )}
+              </div>
+
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Payment Mode</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['GCash', 'Cash', 'QRPH'].map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => handleUpdatePayment(settlingPlayer.id, 'PAID', mode)}
+                      className="p-3 bg-slate-50 hover:bg-blue-600 hover:text-white border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                    >
+                      {mode}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex space-x-2 pt-2">
+                <button 
+                  onClick={() => handleUpdatePayment(settlingPlayer.id, 'UNPAID', '')}
+                  className="flex-1 py-4 bg-red-50 text-red-600 font-black rounded-xl uppercase tracking-widest text-[9px] border border-red-100"
+                >
+                  Reset to Unpaid
+                </button>
+                <button 
+                  onClick={() => setSettlingPlayer(null)}
+                  className="px-6 py-4 bg-slate-100 text-slate-400 font-black rounded-xl uppercase tracking-widest text-[9px]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FINANCIAL SETTINGS MODAL */}
+      {showFinancialsModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Session Financials</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase">Active Scheme: {activeSession.paymentScheme}</p>
+              </div>
+              <button onClick={() => setShowFinancialsModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-green-50 p-4 rounded-2xl border border-green-100">
+                  <span className="text-[10px] font-black text-green-700 uppercase block mb-1">Collected</span>
+                  <span className="text-2xl font-black text-green-900 leading-none">₱{financials.collected}</span>
+                </div>
+                <div className="bg-red-50 p-4 rounded-2xl border border-red-100">
+                  <span className="text-[10px] font-black text-red-700 uppercase block mb-1">Outstanding</span>
+                  <span className="text-2xl font-black text-red-900 leading-none">₱{financials.outstanding}</span>
+                </div>
+              </div>
+
+              {/* Editable Rates */}
+              <div className="pt-4 border-t border-slate-100 space-y-4">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Update Session Rates</label>
+                
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <button 
+                    type="button" 
+                    onClick={() => setPaymentScheme('FIXED')}
+                    className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${paymentScheme === 'FIXED' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                  >
+                    Fixed Fee
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setPaymentScheme('GAME')}
+                    className={`p-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${paymentScheme === 'GAME' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+                  >
+                    Game Fee
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Base/Court Fee (PHP)</label>
+                    <input 
+                      type="number" 
+                      value={baseFee} 
+                      onChange={e => setBaseFee(parseInt(e.target.value) || 0)}
+                      className="w-full p-3 bg-blue-50/50 border border-blue-100 rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                    />
+                  </div>
+                  {paymentScheme === 'GAME' && (
+                    <div>
+                      <label className="text-[8px] font-black text-slate-400 uppercase block mb-1">Fee per Game (PHP)</label>
+                      <input 
+                        type="number" 
+                        value={gameFee} 
+                        onChange={e => setGameFee(parseInt(e.target.value) || 0)}
+                        className="w-full p-3 bg-blue-50/50 border border-blue-100 rounded-xl font-black text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleUpdateFinancials}
+                  className="w-full py-3 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest text-[10px] shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+                >
+                  Update All Bills
+                </button>
+              </div>
+
+              {/* Breakdown */}
+              <div className="space-y-2 pt-4 border-t border-slate-100">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block px-1">Current Breakdown</label>
+                <div className="bg-slate-50 rounded-2xl p-4 space-y-3">
+                  {Object.entries(financials.breakdown).map(([mode, amount]) => (
+                    <div key={mode} className="flex justify-between items-center text-xs font-bold">
+                      <span className="text-slate-500 uppercase tracking-tighter">{mode}</span>
+                      <span className="text-slate-800 tracking-tighter">₱{amount}</span>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-slate-200 flex justify-between items-center font-black text-xs">
+                    <span className="text-slate-400 uppercase">Total Revenue</span>
+                    <span className="text-blue-600">₱{financials.collected + financials.outstanding}</span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowFinancialsModal(false)}
+                className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-xs shadow-lg mt-2"
+              >
+                Close Dashboard
+              </button>
+            </div>
           </div>
         </div>
       )}
