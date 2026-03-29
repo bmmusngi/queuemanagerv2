@@ -117,7 +117,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
       if (res.ok) {
         const newPlayer = await res.json();
         setPlayers([...players, newPlayer]);
-        setShowAddPlayerModal(false);
+        // Modal stays open for succession adds
       }
     } catch (err) {
       console.error("Failed to add player from member:", err);
@@ -144,7 +144,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
         setWalkinName('');
         setWalkinLevel(1);
         setWalkinGender('Male');
-        setShowAddPlayerModal(false);
+        // Modal stays open for succession adds
       }
     } catch (err) {
       console.error("Failed to add walk-in player:", err);
@@ -460,12 +460,22 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
             <div className="p-6">
               {addPlayerTab === 'member' ? (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {Array.isArray(availableMembers) && availableMembers.map((m: any) => (
-                    <button key={m.id} onClick={() => handleAddFromMember(m)} className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 group transition-all">
-                      <span className="font-bold text-slate-700">{m.name}</span>
-                      <span className="text-[9px] font-black bg-slate-100 text-slate-400 px-2 py-1 rounded group-hover:bg-blue-600 group-hover:text-white transition-colors uppercase">Check-in</span>
-                    </button>
-                  ))}
+                  {Array.isArray(availableMembers) && availableMembers.map((m: any) => {
+                    const isAdded = players.some((p: any) => p.memberId === m.id);
+                    return (
+                      <button 
+                        key={m.id} 
+                        onClick={() => !isAdded && handleAddFromMember(m)} 
+                        disabled={isAdded}
+                        className={`w-full flex justify-between items-center p-4 rounded-xl border transition-all ${isAdded ? 'bg-slate-50 border-slate-100 opacity-60 cursor-not-allowed' : 'border-slate-100 hover:border-blue-200 hover:bg-blue-50 group'}`}
+                      >
+                        <span className={`font-bold ${isAdded ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{m.name}</span>
+                        <span className={`text-[9px] font-black px-2 py-1 rounded uppercase transition-colors ${isAdded ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                          {isAdded ? 'Checked-in' : 'Check-in'}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <form onSubmit={handleAddWalkin} className="space-y-4">
