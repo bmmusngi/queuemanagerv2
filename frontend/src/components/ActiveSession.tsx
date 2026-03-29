@@ -36,13 +36,16 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   // Hydrate voices
   useEffect(() => {
+    if (!window.speechSynthesis) return;
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
       setAvailableVoices(voices);
     };
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
-    return () => { window.speechSynthesis.onvoiceschanged = null; };
+    return () => { 
+      if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null; 
+    };
   }, []);
 
   // Persist settings
