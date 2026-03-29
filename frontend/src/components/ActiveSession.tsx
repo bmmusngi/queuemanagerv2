@@ -211,6 +211,24 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
     }
   };
 
+  const announceMatchup = (courtName: string, game: any) => {
+    if (!window.speechSynthesis) return;
+    
+    // Stop any ongoing announcement
+    window.speechSynthesis.cancel();
+
+    // Use phoneticAlias if it exists in the future, otherwise default to name
+    const teamNamesA = game.teamA?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team A';
+    const teamNamesB = game.teamB?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team B';
+    
+    // e.g. "Court 1. John and Jane, versus, Mike and Sarah."
+    const message = new SpeechSynthesisUtterance(`Game assigned to ${courtName}. ${teamNamesA}, versus, ${teamNamesB}.`);
+    message.rate = 0.9;
+    message.pitch = 1.0;
+    
+    window.speechSynthesis.speak(message);
+  };
+
   // --- 1. EMPTY STATE ---
   if (!activeSession) {
     return (
@@ -354,9 +372,20 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
                   <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
                   <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>{c.game ? 'Playing' : c.status}</span>
                 </div>
-                <div className="p-6 text-center">
+                <div className="p-6 flex flex-col items-center justify-center space-y-3">
                   {c.game ? (
-                    <div className="text-[10px] font-black text-slate-700 uppercase">{c.game.teamA?.map(p => p.name).join(' & ')} <span className="text-slate-300 px-1">vs</span> {c.game.teamB?.map(p => p.name).join(' & ')}</div>
+                    <>
+                      <div className="text-[10px] font-black text-slate-700 uppercase">
+                        {c.game.teamA?.map((p: any) => p.name).join(' & ')} <span className="text-slate-300 px-1">vs</span> {c.game.teamB?.map((p: any) => p.name).join(' & ')}
+                      </div>
+                      <button 
+                        onClick={() => announceMatchup(c.name, c.game)}
+                        title="Announce Matchup on Speaker"
+                        className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border border-blue-100"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                      </button>
+                    </>
                   ) : (
                     <div className="text-slate-300 text-[10px] font-black uppercase tracking-widest">Ready</div>
                   )}
