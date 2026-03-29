@@ -51,6 +51,16 @@ export class SessionService {
     });
   }
 
+  // READ: Get all sessions (for reports/history)
+  async getAllSessions() {
+    return await prisma.session.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        queueingGroup: true,
+      }
+    });
+  }
+
   // READ: Get details of a specific session
   async getSessionById(id: string) {
     return await prisma.session.findUnique({

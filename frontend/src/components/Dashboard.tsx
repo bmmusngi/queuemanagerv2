@@ -5,30 +5,12 @@ import QueueingGroupManager from './QueueingGroup';
 import MemberManager from './MemberManager';
 import ActiveSession from './ActiveSession';
 import Admin from './Admin';
+import History from './History';
+import Reports from './Reports';
 
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
   const [globalSession, setGlobalSession] = useState<any>(null);
-
-  // Dynamically render the active view
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'session':
-        return <ActiveSession onSessionUpdate={setGlobalSession} />;
-      case 'members':
-        return <MemberManager preselectedGroupId={globalSession?.queueingGroupId} />;
-      case 'history':
-        return <ComingSoon title="Session Game History" />;
-      case 'group':
-        return <QueueingGroupManager />;                            //QueueingGroup.tsx
-      case 'reports':
-        return <ComingSoon title="Player & Session Reports" />;
-      case 'admin':
-        return <Admin />;
-      default:
-        return <ComingSoon title="Module" />;
-    }
-  };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -47,8 +29,14 @@ export const DashboardLayout = () => {
       {/* Main Content Area */}
       {/* The padding ensures it doesn't hug the tablet edges too tightly */}
       <main className="flex-grow p-6 overflow-y-auto">
-        <div className="max-w-7xl mx-auto h-full">
-          {renderContent()}
+        <div className="max-w-7xl mx-auto h-full relative">
+          <div className={activeTab === 'session' ? 'block h-full' : 'hidden h-full'}><ActiveSession onSessionUpdate={setGlobalSession} /></div>
+          <div className={activeTab === 'members' ? 'block h-full' : 'hidden h-full'}><MemberManager preselectedGroupId={globalSession?.queueingGroupId} /></div>
+          <div className={activeTab === 'group' ? 'block h-full' : 'hidden h-full'}><QueueingGroupManager /></div>
+          <div className={activeTab === 'admin' ? 'block h-full' : 'hidden h-full'}><Admin /></div>
+          
+          <div className={activeTab === 'history' ? 'block h-full' : 'hidden h-full'}><History globalSession={globalSession} /></div>
+          <div className={activeTab === 'reports' ? 'block h-full' : 'hidden h-full'}><Reports /></div>
         </div>
       </main>
     </div>

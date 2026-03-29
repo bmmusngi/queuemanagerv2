@@ -19,6 +19,12 @@ export class SessionController {
     return await this.sessionService.getActiveSessions();
   }
 
+  // GET /sessions/history (Fetches all sessions, active or completed, for reports)
+  @Get('history')
+  async findAllHistory() {
+    return await this.sessionService.getAllSessions();
+  }
+
   // GET /sessions/:id (Fetches a specific session, including courts and players)
   @Get(':id')
   async findOne(@Param('id') id: string) {
