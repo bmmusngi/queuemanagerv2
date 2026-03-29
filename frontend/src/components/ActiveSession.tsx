@@ -28,6 +28,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [groups, setGroups] = useState<any[]>([]);
   const [availableMembers, setAvailableMembers] = useState<any[]>([]);
   const [pendingGames, setPendingGames] = useState<any[]>([]);
+  const [allSessionGames, setAllSessionGames] = useState<any[]>([]); // Track all games for history checks
 
   // Active players in the current session
   const [players, setPlayers] = useState<any[]>([]);
@@ -53,8 +54,11 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       fetch(`${API_BASE}/games/session/${activeSession.id}`)
         .then(res => res.json())
         .then(data => {
-          const pending = data.filter((g: any) => g.status === 'PENDING');
-          setPendingGames(pending);
+          if (Array.isArray(data)) {
+            const pending = data.filter((g: any) => g.status === 'PENDING');
+            setPendingGames(pending);
+            setAllSessionGames(data);
+          }
         })
         .catch(err => console.error("Error loading games:", err));
 
@@ -181,6 +185,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       if (res.ok) {
         const newGame = await res.json();
         setPendingGames([...pendingGames, newGame]);
+        setAllSessionGames([...allSessionGames, newGame]);
         setTeamA([]);
         setTeamB([]);
         setShowDraftModal(false);
@@ -279,6 +284,47 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     
     window.speechSynthesis.speak(message);
   };
+
+  // Derived state for draft warnings
+  const draftWarnings = React.useMemo(() => {
+    const warnings: string[] = [];
+    if (!teamA.length && !teamB.length) return warnings;
+
+    // Check Pairings
+    const checkPairings = (team: any[], teamName: string) => {
+      if (team.length < 2) return;
+      for (let i = 0; i < team.length; i++) {
+        for (let j = i + 1; j < team.length; j++) {
+          const p1 = team[i];
+          const p2 = team[j];
+          const paired = allSessionGames.some(g => {
+            const inA = g.teamA?.some((p: any) => p.id === p1.id) && g.teamA?.some((p: any) => p.id === p2.id);
+            const inB = g.teamB?.some((p: any) => p.id === p1.id) && g.teamB?.some((p: any) => p.id === p2.id);
+            return inA || inB;
+          });
+          if (paired) warnings.push(`${p1.name} and ${p2.name} have already paired up this session.`);
+        }
+      }
+    };
+    checkPairings(teamA, 'Team A');
+    checkPairings(teamB, 'Team B');
+
+    // Check Matchups
+    for (const pA of teamA) {
+      for (const pB of teamB) {
+        const matchups = allSessionGames.some(g => {
+          const aInTeamA = g.teamA?.some((p: any) => p.id === pA.id);
+          const bInTeamB = g.teamB?.some((p: any) => p.id === pB.id);
+          const aInTeamB = g.teamB?.some((p: any) => p.id === pA.id);
+          const bInTeamA = g.teamA?.some((p: any) => p.id === pB.id);
+          return (aInTeamA && bInTeamB) || (aInTeamB && bInTeamA);
+        });
+        if (matchups) warnings.push(`${pA.name} and ${pB.name} have already played against each other.`);
+      }
+    }
+
+    return Array.from(new Set(warnings));
+  }, [teamA, teamB, allSessionGames]);
 
   // --- 1. EMPTY STATE ---
   if (!activeSession) {
@@ -544,6 +590,22 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 </div>
               </div>
             </div>
+            
+            {/* Warnings Block */}
+            {draftWarnings.length > 0 && (
+              <div className="px-6 pb-2">
+                <div className="bg-orange-50 text-orange-700 p-4 rounded-xl text-[10px] font-bold tracking-wide flex flex-col space-y-2 border border-orange-200">
+                  <span className="uppercase text-orange-900 font-black flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    Opponent Matchup Alerts
+                  </span>
+                  <ul className="list-disc pl-5 opacity-90">
+                    {draftWarnings.map((w, i) => <li key={i}>{w}</li>)}
+                  </ul>
+                </div>
+              </div>
+            )}
+
             <div className="p-6 bg-slate-50 flex space-x-3">
               <button onClick={handleDraftGame} className="flex-1 py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Add to Pending</button>
               <button onClick={() => setShowDraftModal(false)} className="px-8 py-4 bg-white text-slate-400 font-black rounded-2xl uppercase tracking-widest text-xs border border-slate-200">Cancel</button>
