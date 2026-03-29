@@ -66,6 +66,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   // Active players in the current session
   const [players, setPlayers] = useState<any[]>([]);
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   // --- FORM STATES ---
   const [targetGroupId, setTargetGroupId] = useState(selectedGroupId || '');
@@ -305,9 +306,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     e.preventDefault();
   };
 
-  const onDrop = async (e: any, courtId: string) => {
-    const gameId = e.dataTransfer.getData("gameId");
-
+  const handleStartGame = async (gameId: string, courtId: string) => {
     try {
       const res = await fetch(`${API_BASE}/games/${gameId}/start`, {
         method: 'PUT',
@@ -322,7 +321,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
           c.id === courtId ? { ...c, status: 'Playing', game: updatedGame } : c
         );
         setActiveSession({ ...activeSession, courts: updatedCourts });
-        setPendingGames(pendingGames.filter(g => g.id !== gameId));
+        setPendingGames(prev => prev.filter(g => g.id !== gameId));
+        setSelectedGameId(null); // Clear selection after success
 
         // Update player statuses locally
         const playingIds = [...(updatedGame.teamA || []), ...(updatedGame.teamB || [])].map((p: any) => p.id);
@@ -333,8 +333,13 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
         ));
       }
     } catch (err) {
-      console.error("Failed to assign game to court:", err);
+      console.error("Failed to start game:", err);
     }
+  };
+
+  const onDrop = async (e: any, courtId: string) => {
+    const gameId = e.dataTransfer.getData("gameId");
+    if (gameId) handleStartGame(gameId, courtId);
   };
 
   const handleCompleteGame = async () => {
@@ -604,7 +609,10 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                   key={game.id}
                   draggable
                   onDragStart={(e) => onDragStart(e, game.id)}
-                  className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-grab active:cursor-grabbing hover:border-blue-400 transition-colors"
+                  onContextMenu={(e) => e.preventDefault()}
+                  onClick={() => setSelectedGameId(selectedGameId === game.id ? null : game.id)}
+                  style={{ userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none' }}
+                  className={`p-4 rounded-xl shadow-sm border-2 transition-all cursor-grab active:cursor-grabbing ${selectedGameId === game.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:border-blue-400'}`}
                 >
                   <div className="text-[8px] font-black text-blue-600 uppercase mb-2">{game.type}</div>
                   <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
@@ -630,8 +638,18 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 key={c.id}
                 onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, c.id)}
-                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all ${c.game ? 'border-blue-500' : 'border-slate-200'}`}
+                className={`bg-white rounded-xl shadow-sm border-2 overflow-hidden transition-all relative ${c.game ? 'border-blue-500' : (selectedGameId ? 'border-dashed border-blue-300' : 'border-slate-200')}`}
               >
+                {!c.game && selectedGameId && (
+                  <button
+                    onClick={() => handleStartGame(selectedGameId, c.id)}
+                    className="absolute inset-0 bg-blue-600/10 hover:bg-blue-600/20 z-10 flex items-center justify-center group"
+                  >
+                    <div className="bg-blue-600 text-white px-4 py-2 rounded-full font-black text-[10px] uppercase shadow-lg transform group-hover:scale-110 transition-transform">
+                      Assign Here
+                    </div>
+                  </button>
+                )}
                 <div className="bg-slate-800 p-2.5 flex justify-between items-center">
                   <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
                   <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>{c.game ? 'Playing' : c.status}</span>
