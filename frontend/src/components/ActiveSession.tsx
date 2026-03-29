@@ -21,6 +21,35 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [filterBy, setFilterBy] = useState('Active'); // All, Active, Available
   
+  // --- AUDIO / TTS STATE ---
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [ttsSettings, setTtsSettings] = useState(() => {
+    const saved = localStorage.getItem('badminton_tts_settings');
+    return saved ? JSON.parse(saved) : {
+      voiceUri: '',
+      rate: 0.9,
+      pitch: 1.0,
+      template: 'Game assigned to {court}. {teamA}, versus, {teamB}.'
+    };
+  });
+
+  // Hydrate voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, []);
+
+  // Persist settings
+  useEffect(() => {
+    localStorage.setItem('badminton_tts_settings', JSON.stringify(ttsSettings));
+  }, [ttsSettings]);
+  
   // --- COMPLETE GAME STATE ---
   const [completeGameData, setCompleteGameData] = useState<any>(null); // holds { courtId, game }
   const [shuttlesUsed, setShuttlesUsed] = useState(0);
@@ -347,10 +376,22 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     const teamNamesA = game.teamA?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team A';
     const teamNamesB = game.teamB?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team B';
     
-    // e.g. "Court 1. John and Jane, versus, Mike and Sarah."
-    const message = new SpeechSynthesisUtterance(`Game assigned to ${courtName}. ${teamNamesA}, versus, ${teamNamesB}.`);
-    message.rate = 0.9;
-    message.pitch = 1.0;
+    // Build custom dialogue from template
+    let dialogue = ttsSettings.template
+      .replace(/{court}/g, courtName)
+      .replace(/{teamA}/g, teamNamesA)
+      .replace(/{teamB}/g, teamNamesB);
+
+    const message = new SpeechSynthesisUtterance(dialogue);
+    
+    // Apply Settings
+    message.rate = ttsSettings.rate;
+    message.pitch = ttsSettings.pitch;
+    
+    if (ttsSettings.voiceUri) {
+      const selectedVoice = availableVoices.find(v => v.voiceURI === ttsSettings.voiceUri);
+      if (selectedVoice) message.voice = selectedVoice;
+    }
     
     window.speechSynthesis.speak(message);
   };
@@ -447,6 +488,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
           <div className="flex space-x-2 border-l pl-6 border-slate-100">
             <button onClick={() => setShowAddPlayerModal(true)} className="text-[10px] font-black bg-blue-600 text-white px-4 py-2 rounded-lg uppercase tracking-wider shadow-sm">+ Add Player</button>
             <button onClick={() => setShowDraftModal(true)} className="text-[10px] font-black bg-slate-100 text-slate-600 px-4 py-2 rounded-lg uppercase tracking-wider">Draft Game</button>
+            <button onClick={() => setShowAudioSettings(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all border border-slate-100" title="Audio Settings">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+            </button>
           </div>
         </div>
         <button onClick={() => setShowEndModal(true)} className="text-[10px] font-black bg-red-50 text-red-600 px-4 py-2 rounded-lg uppercase tracking-wider hover:bg-red-600 hover:text-white transition-all">End Session</button>
@@ -770,6 +814,90 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               <div className="flex space-x-2 pt-6">
                 <button onClick={handleCompleteGame} className="flex-1 py-4 bg-green-600 text-white font-black rounded-xl uppercase tracking-widest shadow-md shadow-green-200 hover:bg-green-700 transition-all text-xs">Complete Match</button>
                 <button onClick={() => setCompleteGameData(null)} className="px-6 py-4 bg-slate-100 text-slate-500 hover:text-slate-700 font-black rounded-xl uppercase tracking-widest text-xs transition-colors">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* AUDIO / TTS SETTINGS MODAL */}
+      {showAudioSettings && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="text-xl font-black text-slate-800 uppercase tracking-tight">Audio Announcements</h3>
+              <button onClick={() => setShowAudioSettings(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* VOICE SELECTION */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Voice Assistant</label>
+                <select 
+                  value={ttsSettings.voiceUri} 
+                  onChange={e => setTtsSettings({...ttsSettings, voiceUri: e.target.value})}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none"
+                >
+                  <option value="">System Default</option>
+                  {availableVoices.map(v => (
+                    <option key={v.voiceURI} value={v.voiceURI}>{v.name} ({v.lang})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* RATE & PITCH */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Speech Rate: {ttsSettings.rate}</label>
+                  <input 
+                    type="range" min="0.5" max="2" step="0.1" 
+                    value={ttsSettings.rate} 
+                    onChange={e => setTtsSettings({...ttsSettings, rate: parseFloat(e.target.value)})}
+                    className="w-full accent-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">Voice Pitch: {ttsSettings.pitch}</label>
+                  <input 
+                    type="range" min="0" max="2" step="0.1" 
+                    value={ttsSettings.pitch} 
+                    onChange={e => setTtsSettings({...ttsSettings, pitch: parseFloat(e.target.value)})}
+                    className="w-full accent-blue-600"
+                  />
+                </div>
+              </div>
+
+              {/* TEMPLATE */}
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Dialogue Template</label>
+                <textarea 
+                  value={ttsSettings.template}
+                  onChange={e => setTtsSettings({...ttsSettings, template: e.target.value})}
+                  rows={3}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none"
+                  placeholder="Use {court}, {teamA}, and {teamB} as placeholders."
+                />
+                <div className="mt-2 text-[8px] text-slate-400 font-bold uppercase flex gap-2">
+                  <span>{'{court}'}</span>
+                  <span>{'{teamA}'}</span>
+                  <span>{'{teamB}'}</span>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-50">
+                <button 
+                  onClick={() => announceMatchup("Court 1", { teamA: [{name: "Player A"}], teamB: [{name: "Player B"}] })} 
+                  className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-slate-200"
+                >
+                  Preview Audio
+                </button>
+                <button 
+                  onClick={() => setShowAudioSettings(false)} 
+                  className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest shadow-md shadow-blue-100 hover:bg-blue-700 transition-all text-xs"
+                >
+                  Save & Close
+                </button>
               </div>
             </div>
           </div>
