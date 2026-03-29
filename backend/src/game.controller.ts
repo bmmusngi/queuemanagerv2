@@ -38,7 +38,7 @@ export class GameController {
     return await this.gameService.completeGame(
       id, 
       completeGameDto.shuttlesUsed, 
-      completeGameDto.winner as 'TeamA' | 'TeamB'
+      completeGameDto.winner
     );
   }
 

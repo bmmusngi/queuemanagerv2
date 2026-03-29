@@ -636,6 +636,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <select value={winner} onChange={e => setWinner(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-green-500 transition-all">
                   <option value="TeamA">🏆 Team A ({completeGameData.game?.teamA?.map((p:any)=>p.name).join(' & ')})</option>
                   <option value="TeamB">🏆 Team B ({completeGameData.game?.teamB?.map((p:any)=>p.name).join(' & ')})</option>
+                  <option value="Tie">🤝 Draw / Tie Match</option>
+                  <option value="N/A">⚪ N/A (No Stats)</option>
                 </select>
               </div>
               <div>

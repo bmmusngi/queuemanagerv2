@@ -1,7 +1,11 @@
+import { Injectable } from '@nestjs/common';
 import { prisma } from './prisma';
 import { Prisma } from '@prisma/client';
+import { PlayerStatisticsService } from './player-statistics.service';
 
+@Injectable()
 export class GameService {
+  constructor(private readonly statsService: PlayerStatisticsService) {}
   
   // CREATE: Set up a new game in the queue (Defaults to 'PENDING' status)
   async createGame(data: any) {
@@ -77,14 +81,39 @@ export class GameService {
   }
 
   // OPERATIONAL UPDATE: Complete the game and log the results
-  async completeGame(id: string, shuttlesUsed: number, winner: 'TeamA' | 'TeamB') {
+  async completeGame(id: string, shuttlesUsed: number, winner: string) {
+    // 1. Fetch current game with players and session info
+    const game = await prisma.game.findUnique({
+      where: { id },
+      include: { teamA: true, teamB: true }
+    });
+
+    if (!game) throw new Error('Game not found');
+
+    // 2. Update player statistics if not N/A
+    if (winner !== 'N/A') {
+      const teamA = game.teamA || [];
+      const teamB = game.teamB || [];
+
+      if (winner === 'TeamA') {
+        for (const p of teamA) await this.statsService.recordWin(p.id, game.sessionId);
+        for (const p of teamB) await this.statsService.recordLoss(p.id, game.sessionId);
+      } else if (winner === 'TeamB') {
+        for (const p of teamB) await this.statsService.recordWin(p.id, game.sessionId);
+        for (const p of teamA) await this.statsService.recordLoss(p.id, game.sessionId);
+      } else if (winner === 'Tie') {
+        for (const p of [...teamA, ...teamB]) await this.statsService.recordTie(p.id, game.sessionId);
+      }
+    }
+
+    // 3. Update game record
     return await prisma.game.update({
       where: { id },
       data: {
         status: 'COMPLETED',
         endedAt: new Date(),
-        shuttlesUsed: shuttlesUsed,
-        winner: winner,
+        shuttlesUsed,
+        winner,
       },
     });
   }
