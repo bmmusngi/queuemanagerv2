@@ -83,11 +83,25 @@ export class PlayerService {
   }
 
   // UPDATE: Modify session-specific player details
-  async updatePlayer(id: string, data: Prisma.PlayerUpdateInput) {
-    return await prisma.player.update({
+  async updatePlayer(id: string, data: Prisma.PlayerUpdateInput, syncMember: boolean = false) {
+    const updatedPlayer = await prisma.player.update({
       where: { id },
       data,
     });
+
+    // If syncMember is true and this is a MEMBER, update the source Member profile
+    if (syncMember && updatedPlayer.memberId) {
+      await prisma.member.update({
+        where: { id: updatedPlayer.memberId },
+        data: {
+          name: updatedPlayer.name as string,
+          gender: updatedPlayer.gender as string,
+          levelWeight: updatedPlayer.levelWeight as number,
+        },
+      });
+    }
+
+    return updatedPlayer;
   }
 
   // UPDATE: Payment Tracking

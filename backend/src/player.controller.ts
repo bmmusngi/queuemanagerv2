@@ -25,4 +25,10 @@ export class PlayerController {
   async togglePlayingStatus(@Param('id') id: string, @Body('status') status: 'ACTIVE' | 'INACTIVE') {
     return await this.playerService.togglePlayingStatus(id, status);
   }
+
+  @Put(':id')
+  async updatePlayer(@Param('id') id: string, @Body() data: any) {
+    const { syncMember, ...updateData } = data;
+    return await this.playerService.updatePlayer(id, updateData, syncMember);
+  }
 }

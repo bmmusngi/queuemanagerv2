@@ -67,6 +67,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   // Active players in the current session
   const [players, setPlayers] = useState<any[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [editingPlayer, setEditingPlayer] = useState<any>(null);
+  const [syncMember, setSyncMember] = useState(false);
 
   // --- FORM STATES ---
   const [targetGroupId, setTargetGroupId] = useState(selectedGroupId || '');
@@ -97,6 +99,33 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       }
     } catch (err) {
       console.error("Failed to toggle player status:", err);
+    }
+  };
+
+  const handleUpdatePlayer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPlayer) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/players/${editingPlayer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingPlayer.name,
+          gender: editingPlayer.gender,
+          levelWeight: editingPlayer.levelWeight,
+          syncMember: syncMember
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setPlayers(players.map(p => p.id === updated.id ? { ...p, ...updated } : p));
+        setEditingPlayer(null);
+        setSyncMember(false);
+      }
+    } catch (err) {
+      console.error("Failed to update player:", err);
     }
   };
 
@@ -583,6 +612,15 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                         {p.playingStatus === 'ACTIVE' ? '💤' : '⚡'}
                       </button>
 
+                      {/* EDIT PLAYER */}
+                      <button
+                        onClick={() => { setEditingPlayer({ ...p }); setSyncMember(false); }}
+                        className="p-1 rounded hover:bg-slate-100 text-slate-400"
+                        title="Edit Player Details"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+
                       {/* SAFE DELETE BUTTON */}
                       {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && (
                         <button onClick={() => removePlayer(p.id)} className="p-1 rounded hover:bg-red-50 text-red-500">
@@ -921,6 +959,82 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* EDIT PLAYER MODAL */}
+      {editingPlayer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-800 p-6 flex justify-between items-center text-white">
+              <h3 className="text-sm font-black uppercase tracking-widest italic">Edit Player Details</h3>
+              <button onClick={() => setEditingPlayer(null)} className="hover:text-slate-300 transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdatePlayer} className="p-6 space-y-6">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Full Name / Alias</label>
+                <input 
+                  type="text" 
+                  value={editingPlayer.name} 
+                  onChange={e => setEditingPlayer({...editingPlayer, name: e.target.value})}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Gender</label>
+                  <select 
+                    value={editingPlayer.gender} 
+                    onChange={e => setEditingPlayer({...editingPlayer, gender: e.target.value})}
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  >
+                    <option>Male</option>
+                    <option>Female</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Skill Level</label>
+                  <select 
+                    value={editingPlayer.levelWeight} 
+                    onChange={e => setEditingPlayer({...editingPlayer, levelWeight: parseInt(e.target.value)})}
+                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  >
+                    <option value="1">Lvl 1 (Beginner)</option>
+                    <option value="2">Lvl 2 (Intermediate)</option>
+                    <option value="3">Lvl 3 (Advance)</option>
+                  </select>
+                </div>
+              </div>
+
+              {editingPlayer.memberId && (
+                <label className="flex items-center space-x-3 p-4 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer group">
+                  <input 
+                    type="checkbox" 
+                    checked={syncMember} 
+                    onChange={e => setSyncMember(e.target.checked)}
+                    className="w-4 h-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div>
+                    <span className="text-[10px] font-black text-blue-800 uppercase block leading-none">Sync to Permanent Profile</span>
+                    <span className="text-[8px] font-bold text-blue-500 uppercase tracking-tighter">Correct the Member records permanently</span>
+                  </div>
+                </label>
+              )}
+
+              <div className="flex space-x-3 pt-4">
+                <button type="button" onClick={() => setEditingPlayer(null)} className="flex-1 py-4 bg-slate-100 text-slate-600 font-black rounded-xl uppercase tracking-widest text-xs transition-all hover:bg-slate-200">
+                  Cancel
+                </button>
+                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-xl uppercase tracking-widest shadow-md shadow-blue-100 hover:bg-blue-700 transition-all text-xs">
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
