@@ -4,7 +4,7 @@ import { ComingSoon } from './ComingSoon';
 import QueueingGroupManager from './QueueingGroup';
 import MemberManager from './MemberManager';
 import ActiveSession from './ActiveSession';
-
+import Admin from './Admin';
 
 export const DashboardLayout = () => {
   const [activeTab, setActiveTab] = useState('session');
@@ -29,7 +29,7 @@ export const DashboardLayout = () => {
       case 'reports':
         return <ComingSoon title="Player & Session Reports" />;
       case 'admin':
-        return <ComingSoon title="System Administration" />;
+        return <Admin />;
       default:
         return <ComingSoon title="Module" />;
     }
