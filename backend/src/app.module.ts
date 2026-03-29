@@ -5,6 +5,7 @@ import { CourtModule } from './court.module';
 import { GameModule } from './game.module';
 import { QueueingGroupModule } from './queueing-group.module';
 import { SportModule } from './sport.module';
+import { PlayerModule } from './player.module';
 
 @Module({
   imports: [
@@ -13,7 +14,8 @@ import { SportModule } from './sport.module';
     CourtModule,
     GameModule,
     QueueingGroupModule,
-    SportModule
+    SportModule,
+    PlayerModule
   ],
   controllers: [], // Left empty because the individual modules handle their own controllers
   providers: [],   // Left empty because the individual modules handle their own services

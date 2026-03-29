@@ -230,7 +230,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
               <div className="space-y-4">
                 <select value={targetGroupId} onChange={e => setTargetGroupId(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl font-bold text-sm">
                   <option value="">Select Group...</option>
-                  {groups.map((g: any) => (
+                  {Array.isArray(groups) && groups.map((g: any) => (
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
@@ -273,7 +273,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
         {/* PLAYER COLUMN */}
         <div className="w-72 flex-shrink-0 flex flex-col space-y-3">
           <div className="flex justify-between items-center px-2">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase">Queue ({players.length})</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase">Queue ({Array.isArray(players) ? players.length : 0})</h3>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="text-[9px] font-bold bg-transparent text-slate-500 outline-none cursor-pointer">
               <option value="available">Available First</option>
               <option value="waitTime">Wait Time ▽</option>
@@ -283,7 +283,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
           </div>
           
           <div className="flex-1 space-y-2 overflow-y-auto pr-1">
-            {players.map(p => (
+            {Array.isArray(players) && players.map(p => (
               <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group ${p.playingStatus === 'INACTIVE' ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
                 <div className="flex justify-between items-start mb-1">
                   <div className="flex items-center space-x-2">
@@ -314,7 +314,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
         <div className="w-80 flex-shrink-0 flex flex-col space-y-3">
           <h3 className="text-[10px] font-black text-slate-400 uppercase px-2">Pending Games</h3>
           <div className="flex-1 space-y-3 bg-slate-50/50 rounded-2xl p-3 border-2 border-dashed border-slate-200 overflow-y-auto">
-            {pendingGames.length === 0 ? (
+            {(!Array.isArray(pendingGames) || pendingGames.length === 0) ? (
               <div className="text-center py-10 text-slate-400 text-[10px] font-bold uppercase italic tracking-widest opacity-40">Draft a game to start</div>
             ) : (
               pendingGames.map(game => (
@@ -339,11 +339,11 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
         {/* COURTS COLUMN */}
         <div className="flex-1 min-w-[450px] flex flex-col space-y-3">
           <div className="flex justify-between items-center px-2">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Courts ({activeSession.courts.length})</h3>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Courts ({activeSession?.courts ? activeSession.courts.length : 0})</h3>
             <button className="text-[10px] font-black text-blue-600 uppercase">+ Add Court</button>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {activeSession.courts.map((c: any) => (
+            {Array.isArray(activeSession?.courts) && activeSession.courts.map((c: any) => (
               <div 
                 key={c.id} 
                 onDragOver={onDragOver} 
@@ -378,7 +378,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
             <div className="p-6">
               {addPlayerTab === 'member' ? (
                 <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                  {availableMembers.map((m: any) => (
+                  {Array.isArray(availableMembers) && availableMembers.map((m: any) => (
                     <button key={m.id} onClick={() => handleAddFromMember(m)} className="w-full flex justify-between items-center p-4 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50 group transition-all">
                       <span className="font-bold text-slate-700">{m.name}</span>
                       <span className="text-[9px] font-black bg-slate-100 text-slate-400 px-2 py-1 rounded group-hover:bg-blue-600 group-hover:text-white transition-colors uppercase">Check-in</span>
@@ -418,7 +418,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
               <div>
                 <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Team A</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {players.filter(p => p.playingStatus === 'ACTIVE' && !teamB.find(t => t.id === p.id)).map(p => (
+                  {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !teamB.find(t => t.id === p.id)).map(p => (
                     <button 
                       key={p.id} 
                       onClick={() => teamA.find(t => t.id === p.id) ? setTeamA(teamA.filter(t => t.id !== p.id)) : setTeamA([...teamA, p])}
@@ -433,7 +433,7 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
               <div>
                 <h4 className="text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest">Team B</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {players.filter(p => p.playingStatus === 'ACTIVE' && !teamA.find(t => t.id === p.id)).map(p => (
+                  {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !teamA.find(t => t.id === p.id)).map(p => (
                     <button 
                       key={p.id} 
                       onClick={() => teamB.find(t => t.id === p.id) ? setTeamB(teamB.filter(t => t.id !== p.id)) : setTeamB([...teamB, p])}
