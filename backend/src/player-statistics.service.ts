@@ -38,36 +38,57 @@ export class PlayerStatisticsService {
 
   // UPDATE: Atomically increment wins
   async recordWin(playerId: string, sessionId: string) {
-    return await prisma.playerStatistics.update({
+    return await prisma.playerStatistics.upsert({
       where: {
         playerId_sessionId: { playerId, sessionId },
       },
-      data: {
+      update: {
         wins: { increment: 1 },
+      },
+      create: {
+        playerId,
+        sessionId,
+        wins: 1,
+        losses: 0,
+        ties: 0,
       },
     });
   }
 
   // UPDATE: Atomically increment losses
   async recordLoss(playerId: string, sessionId: string) {
-    return await prisma.playerStatistics.update({
+    return await prisma.playerStatistics.upsert({
       where: {
         playerId_sessionId: { playerId, sessionId },
       },
-      data: {
+      update: {
         losses: { increment: 1 },
+      },
+      create: {
+        playerId,
+        sessionId,
+        wins: 0,
+        losses: 1,
+        ties: 0,
       },
     });
   }
 
   // UPDATE: Atomically increment ties
   async recordTie(playerId: string, sessionId: string) {
-    return await prisma.playerStatistics.update({
+    return await prisma.playerStatistics.upsert({
       where: {
         playerId_sessionId: { playerId, sessionId },
       },
-      data: {
+      update: {
         ties: { increment: 1 },
+      },
+      create: {
+        playerId,
+        sessionId,
+        wins: 0,
+        losses: 0,
+        ties: 1,
       },
     });
   }
