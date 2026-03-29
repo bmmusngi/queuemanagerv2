@@ -18,6 +18,6 @@ async function bootstrap() {
   const port = 3001;
   await app.listen(port);
 
-  console.log(`✅ Backend is live at: https://shirostor.tailf23fe.ts.net:8459/api`);
+  console.log(`✅ Backend is live at: http://100.88.175.25:8459/api`);
 }
 bootstrap();
