@@ -12,6 +12,11 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
   const [addPlayerTab, setAddPlayerTab] = useState('member'); // 'member' or 'walkin'
   const [sortBy, setSortBy] = useState('waitTime');
   
+  // --- COMPLETE GAME STATE ---
+  const [completeGameData, setCompleteGameData] = useState<any>(null); // holds { courtId, game }
+  const [shuttlesUsed, setShuttlesUsed] = useState(0);
+  const [winner, setWinner] = useState('TeamA'); // 'TeamA' or 'TeamB'
+  
   // --- DATA STATES ---
   const [groups, setGroups] = useState([]);
   const [availableMembers, setAvailableMembers] = useState([]);
@@ -218,6 +223,38 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
     }
   };
 
+  const handleCompleteGame = async () => {
+    if (!completeGameData) return;
+    const { courtId, game } = completeGameData;
+    try {
+      const res = await fetch(`${API_BASE}/games/${game.id}/complete`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ shuttlesUsed, winner })
+      });
+      if (res.ok) {
+        // Free the court
+        const updatedCourts = activeSession.courts.map((c: any) => 
+          c.id === courtId ? { ...c, status: 'ACTIVE', game: null } : c
+        );
+        setActiveSession({ ...activeSession, courts: updatedCourts });
+        
+        // Return players to queue (active so they can be drafted again)
+        const playingIds = [...(game.teamA || []), ...(game.teamB || [])].map((p: any) => p.id);
+        const updatedPlayers = players.map((p: any) => 
+          playingIds.includes(p.id) ? { ...p, playingStatus: 'ACTIVE' } : p
+        );
+        setPlayers(updatedPlayers);
+        
+        setCompleteGameData(null);
+        setShuttlesUsed(0);
+        setWinner('TeamA');
+      }
+    } catch (err) {
+      console.error("Failed to complete game:", err);
+    }
+  };
+
   const announceMatchup = (courtName: string, game: any) => {
     if (!window.speechSynthesis) return;
     
@@ -385,13 +422,22 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
                       <div className="text-[10px] font-black text-slate-700 uppercase">
                         {c.game.teamA?.map((p: any) => p.name).join(' & ')} <span className="text-slate-300 px-1">vs</span> {c.game.teamB?.map((p: any) => p.name).join(' & ')}
                       </div>
-                      <button 
-                        onClick={() => announceMatchup(c.name, c.game)}
-                        title="Announce Matchup on Speaker"
-                        className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border border-blue-100"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-                      </button>
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => announceMatchup(c.name, c.game)}
+                          title="Announce Matchup on Speaker"
+                          className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border border-blue-100"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                        </button>
+                        <button 
+                          onClick={() => { setCompleteGameData({ courtId: c.id, game: c.game }); setWinner('TeamA'); setShuttlesUsed(0); }}
+                          title="Finish Game"
+                          className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white px-4 py-2 rounded-full text-[10px] font-black uppercase transition-colors flex items-center justify-center shadow-sm border border-green-100"
+                        >
+                          Finish
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <div className="text-slate-300 text-[10px] font-black uppercase tracking-widest">Ready</div>
@@ -496,6 +542,35 @@ export default function ActiveSession({ selectedGroupId }: { selectedGroupId?: s
             <h3 className="text-xl font-black text-slate-800 mb-6 uppercase italic">Finish Session?</h3>
             <button onClick={handleEndSession} className="w-full py-4 bg-red-600 text-white font-black rounded-xl uppercase tracking-widest mb-2 shadow-lg shadow-red-100">Confirm Close</button>
             <button onClick={() => setShowEndModal(false)} className="w-full py-4 text-[10px] font-black text-slate-400 uppercase">Back to Game</button>
+          </div>
+        </div>
+      )}
+
+      {/* COMPLETE GAME MODAL */}
+      {completeGameData && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden p-6 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-black text-slate-800 mb-6 uppercase tracking-tight text-center border-b pb-4">Finish Game</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Winner</label>
+                <select value={winner} onChange={e => setWinner(e.target.value)} className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-green-500 transition-all">
+                  <option value="TeamA">🏆 Team A ({completeGameData.game?.teamA?.map((p:any)=>p.name).join(' & ')})</option>
+                  <option value="TeamB">🏆 Team B ({completeGameData.game?.teamB?.map((p:any)=>p.name).join(' & ')})</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Shuttles Used</label>
+                <div className="flex items-center space-x-3 bg-slate-50 border border-slate-200 rounded-xl p-2 px-4 shadow-sm focus-within:ring-2 focus-within:ring-green-500 transition-all">
+                  <span className="text-xl">🏸</span>
+                  <input type="number" min="0" value={shuttlesUsed} onChange={e => setShuttlesUsed(parseInt(e.target.value) || 0)} className="w-full p-2 bg-transparent font-black text-base outline-none text-slate-700" />
+                </div>
+              </div>
+              <div className="flex space-x-2 pt-6">
+                <button onClick={handleCompleteGame} className="flex-1 py-4 bg-green-600 text-white font-black rounded-xl uppercase tracking-widest shadow-md shadow-green-200 hover:bg-green-700 transition-all text-xs">Complete Match</button>
+                <button onClick={() => setCompleteGameData(null)} className="px-6 py-4 bg-slate-100 text-slate-500 hover:text-slate-700 font-black rounded-xl uppercase tracking-widest text-xs transition-colors">Cancel</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
