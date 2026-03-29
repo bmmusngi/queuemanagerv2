@@ -23,7 +23,7 @@ services:
     container_name: badminton_queue_backend
     restart: unless-stopped
     ports:
-      - "8459:3001"
+      - "3001:3001"
     environment:
       # This connects Prisma directly to the 'db' container
       - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
