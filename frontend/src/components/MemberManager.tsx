@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-export default function MemberManager() {
-  const [groups, setGroups] = useState([]);
-  const [selectedGroupId, setSelectedGroupId] = useState('');
-  const [members, setMembers] = useState([]);
+export default function MemberManager({ preselectedGroupId }: { preselectedGroupId?: string }) {
+  const [groups, setGroups] = useState<any[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState(preselectedGroupId || '');
+  const [members, setMembers] = useState<any[]>([]);
   const [isBulkMode, setIsBulkMode] = useState(false);
   
   // Edit State
@@ -22,6 +22,12 @@ export default function MemberManager() {
       .then(data => setGroups(data))
       .catch(err => console.error("Error loading groups:", err));
   }, []);
+
+  useEffect(() => {
+    if (preselectedGroupId && preselectedGroupId !== selectedGroupId) {
+      setSelectedGroupId(preselectedGroupId);
+    }
+  }, [preselectedGroupId]);
 
   useEffect(() => {
     if (selectedGroupId) refreshMemberList();

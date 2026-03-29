@@ -25,12 +25,12 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [winner, setWinner] = useState('TeamA'); // 'TeamA' or 'TeamB'
   
   // --- DATA STATES ---
-  const [groups, setGroups] = useState([]);
-  const [availableMembers, setAvailableMembers] = useState([]);
-  const [pendingGames, setPendingGames] = useState([]);
+  const [groups, setGroups] = useState<any[]>([]);
+  const [availableMembers, setAvailableMembers] = useState<any[]>([]);
+  const [pendingGames, setPendingGames] = useState<any[]>([]);
 
   // Active players in the current session
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState<any[]>([]);
 
   // --- FORM STATES ---
   const [targetGroupId, setTargetGroupId] = useState(selectedGroupId || '');
@@ -42,8 +42,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   
   // Game Draft Form State
   const [draftType, setDraftType] = useState('Doubles'); // Singles, Doubles, Triples
-  const [teamA, setTeamA] = useState([]);
-  const [teamB, setTeamB] = useState([]);
+  const [teamA, setTeamA] = useState<any[]>([]);
+  const [teamB, setTeamB] = useState<any[]>([]);
 
   const API_BASE = 'http://100.88.175.25:3001/api';
 
@@ -158,7 +158,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     }
   };
 
-  const removePlayer = (id) => {
+  const removePlayer = (id: string) => {
     setPlayers(players.filter(p => p.id !== id));
   };
 
@@ -190,15 +190,15 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     }
   };
 
-  const onDragStart = (e, gameId) => {
+  const onDragStart = (e: any, gameId: string) => {
     e.dataTransfer.setData("gameId", gameId);
   };
 
-  const onDragOver = (e) => {
+  const onDragOver = (e: any) => {
     e.preventDefault();
   };
 
-  const onDrop = async (e, courtId) => {
+  const onDrop = async (e: any, courtId: string) => {
     const gameId = e.dataTransfer.getData("gameId");
     
     try {
