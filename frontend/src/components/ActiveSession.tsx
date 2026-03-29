@@ -48,7 +48,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [teamA, setTeamA] = useState<any[]>([]);
   const [teamB, setTeamB] = useState<any[]>([]);
 
-  const API_BASE = 'http://100.88.175.25:3001/api';
+  const API_BASE = 'http://100.88.175.25:8459/api';
 
   // Toggle player status
   const togglePlayerStatus = async (id: string, currentStatus: string) => {

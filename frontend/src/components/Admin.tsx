@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const API_BASE = 'http://100.88.175.25:3001/api';
+const API_BASE = 'http://100.88.175.25:8459/api';
 
 export default function Admin() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);

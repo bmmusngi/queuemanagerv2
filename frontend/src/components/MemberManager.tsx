@@ -14,7 +14,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   const [singleMember, setSingleMember] = useState({ name: '', gender: 'Male', levelWeight: 1 });
   const [bulkText, setBulkText] = useState('');
 
-  const API_BASE = 'http://100.88.175.25:3001/api';
+  const API_BASE = 'http://100.88.175.25:8459/api';
 
   useEffect(() => {
     fetch(`${API_BASE}/queueing-groups`)
