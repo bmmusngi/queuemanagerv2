@@ -65,6 +65,21 @@ export class GameService {
 
   // OPERATIONAL UPDATE: Assign a court and start the game
   async startGame(id: string, courtId: string) {
+    const game = await prisma.game.findUnique({
+      where: { id },
+      include: { teamA: true, teamB: true }
+    });
+
+    if (game) {
+      const allPlayers = [...(game.teamA || []), ...(game.teamB || [])];
+      for (const p of allPlayers) {
+        await prisma.player.update({
+          where: { id: p.id },
+          data: { playingStatus: 'PLAYING' }
+        });
+      }
+    }
+
     return await prisma.game.update({
       where: { id },
       data: {
@@ -91,10 +106,11 @@ export class GameService {
     if (!game) throw new Error('Game not found');
 
     // 2. Update player statistics if not N/A
-    if (winner !== 'N/A') {
-      const teamA = game.teamA || [];
-      const teamB = game.teamB || [];
+    const teamA = game.teamA || [];
+    const teamB = game.teamB || [];
+    const allPlayers = [...teamA, ...teamB];
 
+    if (winner !== 'N/A') {
       if (winner === 'TeamA') {
         for (const p of teamA) await this.statsService.recordWin(p.id, game.sessionId);
         for (const p of teamB) await this.statsService.recordLoss(p.id, game.sessionId);
@@ -102,8 +118,16 @@ export class GameService {
         for (const p of teamB) await this.statsService.recordWin(p.id, game.sessionId);
         for (const p of teamA) await this.statsService.recordLoss(p.id, game.sessionId);
       } else if (winner === 'Tie') {
-        for (const p of [...teamA, ...teamB]) await this.statsService.recordTie(p.id, game.sessionId);
+        for (const p of allPlayers) await this.statsService.recordTie(p.id, game.sessionId);
       }
+    }
+
+    // Reset playingStatus to ACTIVE for everyone
+    for (const p of allPlayers) {
+      await prisma.player.update({
+        where: { id: p.id },
+        data: { playingStatus: 'ACTIVE' }
+      });
     }
 
     // 3. Update game record

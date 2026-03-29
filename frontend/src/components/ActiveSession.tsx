@@ -17,7 +17,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [showDraftModal, setShowDraftModal] = useState(false);
   const [addPlayerTab, setAddPlayerTab] = useState('member'); // 'member' or 'walkin'
-  const [sortBy, setSortBy] = useState('waitTime');
+  const [sortBy, setSortBy] = useState('idleTime');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [filterBy, setFilterBy] = useState('Active'); // All, Active, Available
   
   // --- COMPLETE GAME STATE ---
   const [completeGameData, setCompleteGameData] = useState<any>(null); // holds { courtId, game }
@@ -47,6 +49,74 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [teamB, setTeamB] = useState<any[]>([]);
 
   const API_BASE = 'http://100.88.175.25:3001/api';
+
+  // Toggle player status
+  const togglePlayerStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    try {
+      const res = await fetch(`${API_BASE}/players/${id}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (res.ok) {
+        setPlayers(players.map(p => p.id === id ? { ...p, playingStatus: newStatus } : p));
+      }
+    } catch (err) {
+      console.error("Failed to toggle player status:", err);
+    }
+  };
+
+  // Helper to find idle time
+  const getIdleTime = (playerId: string) => {
+    const playerGames = allSessionGames.filter(g => 
+      g.status === 'COMPLETED' && 
+      ([...(g.teamA || []), ...(g.teamB || [])].some((p: any) => p.id === playerId))
+    );
+    if (playerGames.length === 0) return Infinity; // Never played = most idle
+    
+    const lastGame = playerGames.reduce((latest, current) => {
+      const latestDate = new Date(latest.endedAt || 0).getTime();
+      const currentDate = new Date(current.endedAt || 0).getTime();
+      return currentDate > latestDate ? current : latest;
+    });
+    
+    return Date.now() - new Date(lastGame.endedAt).getTime();
+  };
+
+  // Derived filtered and sorted player list
+  const processedPlayers = React.useMemo(() => {
+    if (!Array.isArray(players)) return [];
+    
+    // 1. Filter
+    let list = [...players];
+    if (filterBy === 'Active') {
+      list = list.filter(p => p.playingStatus !== 'INACTIVE');
+    } else if (filterBy === 'Available') {
+      list = list.filter(p => p.playingStatus === 'ACTIVE'); // Active and Not Playing (backend sets status to ACTIVE after game)
+    }
+
+    // 2. Sort
+    list.sort((a, b) => {
+      let comparison = 0;
+      if (sortBy === 'alphabetical') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (sortBy === 'idleTime') {
+        const idleA = getIdleTime(a.id);
+        const idleB = getIdleTime(b.id);
+        comparison = idleA - idleB;
+      } else if (sortBy === 'waitTime') {
+        // Simple wait time logic (createdAt)
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else if (sortBy === 'level') {
+        comparison = a.levelWeight - b.levelWeight;
+      }
+      
+      return sortDirection === 'desc' ? -comparison : comparison;
+    });
+
+    return list;
+  }, [players, filterBy, sortBy, sortDirection, allSessionGames]);
 
   // Load groups and pending games
   useEffect(() => {
@@ -387,41 +457,91 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
         
         {/* PLAYER COLUMN */}
         <div className="w-72 flex-shrink-0 flex flex-col space-y-3">
+          {/* Filtering Tabs */}
+          <div className="flex bg-slate-100 p-1 rounded-xl mx-2">
+            {['All', 'Active', 'Available'].map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilterBy(f)}
+                className={`flex-1 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all ${filterBy === f ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
           <div className="flex justify-between items-center px-2">
-            <h3 className="text-[10px] font-black text-slate-400 uppercase">Queue ({Array.isArray(players) ? players.length : 0})</h3>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="text-[9px] font-bold bg-transparent text-slate-500 outline-none cursor-pointer">
-              <option value="available">Available First</option>
-              <option value="waitTime">Wait Time ▽</option>
-              <option value="alphabetical">Name A-Z</option>
-              <option value="level">Level ▽</option>
-            </select>
+            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {filterBy} List ({processedPlayers.length})
+            </h3>
+            <div className="flex items-center space-x-2">
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value)} 
+                className="text-[9px] font-bold bg-transparent text-slate-500 outline-none cursor-pointer"
+              >
+                <option value="idleTime">Most Idle</option>
+                <option value="waitTime">Check-in order</option>
+                <option value="alphabetical">A to Z</option>
+                <option value="level">Skill Level</option>
+              </select>
+              <button 
+                onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                className="p-1 hover:bg-slate-100 rounded text-slate-400 transition-colors"
+              >
+                {sortDirection === 'desc' ? '▽' : '△'}
+              </button>
+            </div>
           </div>
           
           <div className="flex-1 space-y-2 overflow-y-auto pr-1">
-            {Array.isArray(players) && players.map(p => (
-              <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group ${p.playingStatus === 'INACTIVE' ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-2 h-2 rounded-full ${p.playingStatus === 'PLAYING' ? 'bg-blue-500 animate-pulse' : p.playingStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-300'}`} />
-                    <span className="text-xs font-bold text-slate-800">{p.name}</span>
+            {processedPlayers.map(p => {
+              const isPending = Array.isArray(pendingGames) && pendingGames.some(g => [...(g.teamA || []), ...(g.teamB || [])].some((player: any) => player.id === p.id));
+              const idleMinutes = getIdleTime(p.id) === Infinity ? '-' : Math.floor(getIdleTime(p.id) / (1000 * 60));
+              
+              return (
+                <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group relative ${p.playingStatus === 'INACTIVE' ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
+                  {/* Status Indicator Bar */}
+                  <div className={`absolute top-0 left-0 bottom-0 w-1 rounded-l-xl ${p.playingStatus === 'PLAYING' ? 'bg-blue-500' : p.playingStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-300'}`} />
+                  
+                  <div className="flex justify-between items-start mb-1 pl-1">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xs font-bold text-slate-800">{p.name}</span>
+                      {isPending && <span className="text-[7px] font-black bg-yellow-100 text-yellow-700 px-1 rounded uppercase tracking-tighter">Pending</span>}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
+                      <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
-                    <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span>
+
+                  <div className="flex justify-between items-center mt-2 pl-1">
+                    <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+                      <span>{p.gamesPlayed || 0} Games</span>
+                      <span>{idleMinutes === '-' ? 'Waiting' : `${idleMinutes}m Idle`}</span>
+                    </div>
+
+                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {/* SLEEP/WAKE TOGGLE */}
+                      <button 
+                        onClick={() => togglePlayerStatus(p.id, p.playingStatus)}
+                        title={p.playingStatus === 'ACTIVE' ? "Mark as Sleeping" : "Mark as Active"}
+                        className={`p-1 rounded hover:bg-slate-100 ${p.playingStatus === 'ACTIVE' ? 'text-slate-400' : 'text-blue-500'}`}
+                      >
+                        {p.playingStatus === 'ACTIVE' ? '💤' : '⚡'}
+                      </button>
+
+                      {/* SAFE DELETE BUTTON */}
+                      {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && (
+                        <button onClick={() => removePlayer(p.id)} className="p-1 rounded hover:bg-red-50 text-red-500">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="flex justify-between items-center mt-2">
-                  <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                    <span>{p.gamesPlayed || 0} Games</span>
-                    <span>{p.waitTime || '0m'} Wait</span>
-                  </div>
-                  {/* SAFE DELETE BUTTON */}
-                  {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && (
-                    <button onClick={() => removePlayer(p.id)} className="opacity-0 group-hover:opacity-100 text-[8px] font-black text-red-500 hover:underline uppercase transition-opacity">Remove</button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
