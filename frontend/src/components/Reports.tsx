@@ -35,6 +35,23 @@ export default function Reports() {
       .finally(() => setLoading(false));
   }, [selectedSessionId]);
 
+  const handleUpdatePayment = async (playerId: string, status: string, mode: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/players/${playerId}/payment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status, mode })
+      });
+      if (res.ok) {
+        const updatedRes = await fetch(`${API_BASE}/sessions/${selectedSessionId}`);
+        const updatedData = await updatedRes.json();
+        setSessionDetails(updatedData);
+      }
+    } catch (err) {
+      console.error("Failed to update payment:", err);
+    }
+  };
+
   // Calculate Financials for the selected session
   const financials = React.useMemo(() => {
     if (!sessionDetails || !sessionDetails.players) return null;
@@ -134,19 +151,24 @@ export default function Reports() {
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Unpaid Balances</h3>
                     <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full">{financials.unpaidPlayers.length}</span>
                   </div>
-                  <div className="p-4 space-y-3">
+                  <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
                     {financials.unpaidPlayers.length === 0 ? (
                       <p className="text-[10px] font-bold text-slate-400 uppercase text-center py-4 italic opacity-60">All debts settled</p>
                     ) : (
                       financials.unpaidPlayers.map(p => (
-                        <div key={p.id} className="flex justify-between items-center group">
+                        <div key={p.id} className="flex justify-between items-center group bg-slate-50/50 p-2 rounded-xl border border-transparent hover:border-slate-100 transition-all">
                           <div>
                             <span className="text-xs font-black text-slate-700 block leading-tight">{p.name}</span>
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">{p.gamesPlayed || 0} Games</span>
                           </div>
-                          <div className="text-right">
+                          <div className="text-right flex flex-col items-end">
                             <span className="text-xs font-black text-red-600 block leading-tight">₱{p.amountDue}</span>
-                            <span className="text-[8px] font-black bg-red-50 text-red-600 px-1.5 rounded uppercase tracking-tighter">Unpaid</span>
+                            <button 
+                              onClick={() => handleUpdatePayment(p.id, 'PAID', 'Cash')}
+                              className="mt-1 text-[8px] font-black bg-red-50 text-red-600 px-2 py-1 rounded-lg uppercase tracking-tighter hover:bg-green-600 hover:text-white transition-all shadow-sm"
+                            >
+                              Mark Paid
+                            </button>
                           </div>
                         </div>
                       ))
