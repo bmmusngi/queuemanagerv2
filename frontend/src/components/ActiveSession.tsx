@@ -708,37 +708,40 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                   {/* Status Indicator Bar */}
                   <div className={`absolute top-0 left-0 bottom-0 w-1 rounded-l-xl ${p.playingStatus === 'PLAYING' ? 'bg-blue-500' : p.playingStatus === 'ACTIVE' ? 'bg-green-500' : 'bg-slate-300'}`} />
 
-                  <div className="flex justify-between items-start mb-1 pl-1">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-slate-800">{p.name}</span>
-                      {isPending && <span className="text-[7px] font-black bg-yellow-100 text-yellow-700 px-1 rounded uppercase tracking-tighter">Pending</span>}
-                      {p.playingStatus === 'INACTIVE' && (
-                        <button 
-                          onClick={() => setSettlingPlayer(p)}
-                          className={`text-[7px] font-black px-1 rounded uppercase tracking-tighter transition-all ${p.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700 animate-pulse'}`}
-                        >
-                          {p.paymentStatus === 'PAID' ? `Paid (${p.paymentMode})` : 'Unpaid'}
-                        </button>
-                      )}
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {p.playerStatus === 'WALKIN' && <span className="text-[7px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase">Guest</span>}
-                      <span className="text-[9px] font-black text-slate-300 italic">L{p.levelWeight}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center mt-2 pl-1">
-                    <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
-                      <span>{p.gamesPlayed || 0} Games</span>
-                      <span>{idleMinutes === '-' ? 'Waiting' : `${idleMinutes}m Idle`}</span>
+                  <div className="flex items-center">
+                    {/* COLUMN 1: Level Sidebar */}
+                    <div className="flex flex-col items-center justify-center border-r border-slate-100 pr-3 mr-3 min-w-[36px]">
+                      <span className="text-xs font-black text-blue-600 italic leading-none">L{p.levelWeight}</span>
+                      {p.playerStatus === 'WALKIN' && <span className="text-[6px] font-black bg-orange-100 text-orange-600 px-1 rounded uppercase mt-1 tracking-tighter">Guest</span>}
                     </div>
 
-                    <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* COLUMN 2: Info & Stats */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center flex-wrap gap-1 mb-1 truncate">
+                        <span className="text-xs font-bold text-slate-800 truncate">{p.name}</span>
+                        {isPending && <span className="text-[7px] font-black bg-yellow-100 text-yellow-700 px-1 rounded uppercase tracking-tighter">Pending</span>}
+                        {p.playingStatus === 'INACTIVE' && (
+                          <button 
+                            onClick={() => setSettlingPlayer(p)}
+                            className={`text-[7px] font-black px-1 rounded uppercase tracking-tighter transition-all ${p.paymentStatus === 'PAID' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700 animate-pulse'}`}
+                          >
+                            {p.paymentStatus === 'PAID' ? `Paid (${p.paymentMode})` : 'Unpaid'}
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
+                        <span>{p.gamesPlayed || 0} Games</span>
+                        <span>{idleMinutes === '-' ? 'Waiting' : `${idleMinutes}m Idle`}</span>
+                      </div>
+                    </div>
+
+                    {/* COLUMN 3: Action Grid (Always Visible for Tablet) */}
+                    <div className="grid grid-cols-2 gap-1 ml-3 border-l border-slate-50 pl-2">
                       {/* SLEEP/WAKE TOGGLE */}
                       <button
                         onClick={() => togglePlayerStatus(p.id, p.playingStatus)}
                         title={p.playingStatus === 'ACTIVE' ? "Mark as Sleeping" : "Mark as Active"}
-                        className={`p-1 rounded hover:bg-slate-100 ${p.playingStatus === 'ACTIVE' ? 'text-slate-400' : 'text-blue-500'}`}
+                        className={`p-1.5 rounded-lg border transition-all ${p.playingStatus === 'ACTIVE' ? 'bg-slate-50 text-slate-400 border-slate-100' : 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-100'}`}
                       >
                         {p.playingStatus === 'ACTIVE' ? '💤' : '⚡'}
                       </button>
@@ -746,31 +749,36 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                       {/* EDIT PLAYER */}
                       <button
                         onClick={() => { setEditingPlayer({ ...p }); setSyncMember(false); }}
-                        className="p-1 rounded hover:bg-slate-100 text-slate-400"
-                        title="Edit Player Details"
+                        className="p-1.5 rounded-lg bg-slate-50 text-slate-400 border border-slate-100 hover:bg-slate-100"
+                        title="Edit Details"
                       >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
                       
                       {/* PAY BUTTON */}
-                      {p.paymentStatus === 'UNPAID' && p.playingStatus === 'INACTIVE' && (
+                      {p.paymentStatus === 'UNPAID' && p.playingStatus === 'INACTIVE' ? (
                         <button
                           onClick={() => setSettlingPlayer(p)}
-                          className="p-1 rounded hover:bg-green-50 text-green-600 font-bold text-xs"
+                          className="p-1.5 rounded-lg bg-green-50 text-green-600 font-bold text-[10px] border border-green-100 hover:bg-green-600 hover:text-white"
                           title="Settle Payment"
                         >
                           ₱
                         </button>
+                      ) : (
+                         <div className="w-6 h-6"></div> // Placeholder for grid alignment
                       )}
 
                       {/* SAFE DELETE BUTTON */}
-                      {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' && (
-                        <button onClick={() => removePlayer(p.id)} className="p-1 rounded hover:bg-red-50 text-red-500">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      {(p.gamesPlayed || 0) === 0 && p.playingStatus !== 'PLAYING' ? (
+                        <button onClick={() => removePlayer(p.id)} className="p-1.5 rounded-lg bg-red-50 text-red-500 border border-red-100 hover:bg-red-600 hover:text-white">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                         </button>
+                      ) : (
+                         <div className="w-6 h-6"></div> // Placeholder for grid alignment
                       )}
                     </div>
                   </div>
+
                 </div>
               );
             })}
