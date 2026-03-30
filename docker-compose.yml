@@ -12,38 +12,61 @@ services:
       POSTGRES_DB: queue_manager
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # We can keep this for local DB management, or remove it for maximum security.
+    # Keeping it 5432:5432 for now as it's common for dev.
     ports:
       - "5432:5432"
 
-  # 2. NestJS Backend
+  # 2. Tailscale Sidecar (Gateway)
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: badminton_queue_tailscale
+    hostname: badminton-queue
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container
+    volumes:
+      - ./tailscale:/config
+      - tailscale-data:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    restart: unless-stopped
+
+  # 3. NestJS Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: badminton_queue_backend
     restart: unless-stopped
-    ports:
-      - "8459:3001"
+    # Share the Tailscale network stack
+    network_mode: "service:tailscale"
     environment:
-      # This connects Prisma directly to the 'db' container
+      # Use 'db' hostname which 'tailscale' service can resolve on the Docker network
       - DATABASE_URL=postgresql://queue_admin:super_secure_password_here@db:5432/queue_manager?schema=public
       - PORT=3001
     depends_on:
       - db
+      - tailscale
 
-  # 3. React Frontend
+  # 4. React Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: badminton_queue_frontend
     restart: unless-stopped
-    ports:
-      # Maps your tablet's port 3055 to the container's Nginx port 80
-      - "3055:80"
+    # Share the Tailscale network stack
+    network_mode: "service:tailscale"
     depends_on:
+      - tailscale
       - backend
 
-# Persistent storage so your database survives container restarts
+# Persistent storage
 volumes:
   pgdata:
+  tailscale-data:

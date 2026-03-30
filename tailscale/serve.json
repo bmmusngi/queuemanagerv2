@@ -1,0 +1,22 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "badminton-queue.pufferfish-macaroni.ts.net:443": {
+      "Handlers": {
+        "/api": {
+          "Proxy": "http://127.0.0.1:3001"
+        },
+        "/": {
+          "Proxy": "http://127.0.0.1:80"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "badminton-queue.pufferfish-macaroni.ts.net:443": true
+  }
+}

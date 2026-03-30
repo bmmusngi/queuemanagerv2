@@ -7,7 +7,7 @@ export default function QueueingGroupManager() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Directly targeting your ASUSTOR backend over Tailscale
-  const API_URL = 'http://100.88.175.25:8459/api/queueing-groups';
+  const API_URL = '/api/queueing-groups';
 
   // Fetch existing groups from the database
   const fetchGroups = async () => {

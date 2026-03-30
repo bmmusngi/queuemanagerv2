@@ -7,7 +7,7 @@ export default function Reports() {
   const [sessionDetails, setSessionDetails] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
-  const API_BASE = 'http://100.88.175.25:8459/api';
+  const API_BASE = '/api';
 
   // Load backend session history
   useEffect(() => {

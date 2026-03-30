@@ -7,7 +7,7 @@ export default function LobbyView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const API_BASE = 'http://100.88.175.25:8459/api';
+  const API_BASE = '/api';
 
   const fetchSession = async () => {
     try {
