@@ -756,7 +756,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                       </button>
                       
                       {/* PAY BUTTON */}
-                      {p.paymentStatus === 'UNPAID' && p.playingStatus === 'INACTIVE' ? (
+                      {p.paymentStatus === 'UNPAID' && (activeSession?.paymentScheme === 'FIXED' || p.playingStatus === 'INACTIVE') ? (
                         <button
                           onClick={() => setSettlingPlayer(p)}
                           className="p-1.5 rounded-lg bg-green-50 text-green-600 font-bold text-[10px] border border-green-100 hover:bg-green-600 hover:text-white"
