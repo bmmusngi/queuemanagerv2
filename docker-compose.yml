@@ -26,7 +26,7 @@ services:
       - TS_AUTHKEY=${TS_AUTHKEY}
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_SERVE_CONFIG=/config/serve.json
-      - TS_EXTRA_ARGS=--advertise-tags=tag:container
+      #- TS_EXTRA_ARGS=--advertise-tags=tag:container
     volumes:
       - ./tailscale:/config
       - tailscale-data:/var/lib/tailscale
