@@ -475,6 +475,76 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     }
   };
 
+  const handleAddCourt = async () => {
+    try {
+      const newIndex = (activeSession.courts?.length || 0) + 1;
+      const res = await fetch(`${API_BASE}/courts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSession.id,
+          name: `Court ${newIndex}`,
+          status: 'ACTIVE'
+        })
+      });
+      if (res.ok) {
+        const newCourt = await res.json();
+        setActiveSession({
+          ...activeSession,
+          courts: [...(activeSession.courts || []), newCourt]
+        });
+      }
+    } catch (err) {
+      console.error("Failed to add court:", err);
+    }
+  };
+
+  const handleUpdateCourtName = async (courtId: string, newName: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/courts/${courtId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setActiveSession({
+          ...activeSession,
+          courts: activeSession.courts.map((c: any) => c.id === courtId ? { ...c, name: updated.name } : c)
+        });
+      }
+    } catch (err) {
+      console.error("Failed to update court name:", err);
+    }
+  };
+
+  const handleDeleteCourt = async (courtId: string) => {
+    const court = activeSession.courts.find((c: any) => c.id === courtId);
+    if (court?.game) {
+      alert("Cannot delete a court with an active game.");
+      return;
+    }
+    if (activeSession.courts.length <= 1) {
+      alert("You must have at least one court.");
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this court?")) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/courts/${courtId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setActiveSession({
+          ...activeSession,
+          courts: activeSession.courts.filter((c: any) => c.id !== courtId)
+        });
+      }
+    } catch (err) {
+      console.error("Failed to delete court:", err);
+    }
+  };
+
   const announceMatchup = (courtName: string, game: any) => {
     if (!window.speechSynthesis) return;
 
@@ -818,7 +888,12 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
         <div className="flex-1 min-w-[450px] flex flex-col space-y-3">
           <div className="flex justify-between items-center px-2">
             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Courts ({activeSession?.courts ? activeSession.courts.length : 0})</h3>
-            <button className="text-[10px] font-black text-blue-600 uppercase">+ Add Court</button>
+            <button 
+              onClick={handleAddCourt}
+              className="text-[10px] font-black text-blue-600 uppercase hover:text-blue-800 transition-colors"
+            >
+              + Add Court
+            </button>
           </div>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {Array.isArray(activeSession?.courts) && activeSession.courts.map((c: any) => (
@@ -838,9 +913,27 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                     </div>
                   </button>
                 )}
-                <div className="bg-slate-800 p-2.5 flex justify-between items-center">
-                  <input defaultValue={c.name} className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-24" />
-                  <span className={`text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>{c.game ? 'Playing' : c.status}</span>
+                <div className="bg-slate-800 p-2 flex justify-between items-center group/court">
+                  <div className="flex items-center flex-1">
+                    <input 
+                      defaultValue={c.name} 
+                      onBlur={(e) => handleUpdateCourtName(c.id, e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleUpdateCourtName(c.id, (e.target as HTMLInputElement).value)}
+                      className="bg-transparent text-white font-black text-[10px] uppercase outline-none focus:bg-slate-700 px-2 rounded w-full max-w-[120px] transition-colors" 
+                    />
+                    <span className={`ml-2 text-[8px] font-bold px-2 py-0.5 rounded uppercase ${c.game ? 'bg-blue-500 text-white' : (c.status === 'ACTIVE' ? 'bg-green-500 text-white' : 'bg-slate-500 text-white')}`}>
+                      {c.game ? 'Playing' : c.status}
+                    </span>
+                  </div>
+                  
+                  {!c.game && activeSession.courts.length > 1 && (
+                    <button 
+                      onClick={() => handleDeleteCourt(c.id)}
+                      className="text-slate-500 hover:text-red-400 p-1 opacity-0 group-hover/court:opacity-100 transition-opacity"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    </button>
+                  )}
                 </div>
                 <div className="p-6 flex flex-col items-center justify-center space-y-3">
                   {c.game ? (
