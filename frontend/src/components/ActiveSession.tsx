@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { suggestMatch, DraftSettings } from '../utils/draft.utils';
 
 export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { selectedGroupId?: string, onSessionUpdate?: (session: any) => void }) {
   // --- SESSION STATE ---
@@ -33,6 +34,17 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       template: 'Game assigned to {court}. {teamA}, versus, {teamB}.'
     };
   });
+  
+  const [showDraftSettings, setShowDraftSettings] = useState(false);
+  const [draftSettings, setDraftSettings] = useState<DraftSettings>(() => {
+    const saved = localStorage.getItem('badminton_draft_settings');
+    return saved ? JSON.parse(saved) : {
+      levelWeight: 5,
+      idleWeight: 8,
+      historyWeight: 4,
+      tournamentMode: false
+    };
+  });
 
   // Hydrate voices
   useEffect(() => {
@@ -52,6 +64,10 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   useEffect(() => {
     localStorage.setItem('badminton_tts_settings', JSON.stringify(ttsSettings));
   }, [ttsSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('badminton_draft_settings', JSON.stringify(draftSettings));
+  }, [draftSettings]);
 
   // --- COMPLETE GAME STATE ---
   const [completeGameData, setCompleteGameData] = useState<any>(null); // holds { courtId, game }
@@ -169,6 +185,45 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       }
     } catch (err) {
       console.error("Failed to update payment:", err);
+    }
+  };
+
+  const handleUpdatePartner = async (playerId: string, partnerId: string | null) => {
+    try {
+      const res = await fetch(`${API_BASE}/players/${playerId}/partner`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerId })
+      });
+      if (res.ok) {
+        // Refresh players
+        const updatedPlayers = await fetch(`${API_BASE}/players/session/${activeSession.id}`).then(r => r.json());
+        setPlayers(updatedPlayers);
+        // Update editing player if needed
+        if (editingPlayer?.id === playerId) {
+          const updated = updatedPlayers.find((p: any) => p.id === playerId);
+          setEditingPlayer(updated);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update partner:", err);
+    }
+  };
+
+  const handleSmartSuggest = () => {
+    // 1. Get available players (ACTIVE and not playing)
+    // Actually our 'Available' logic in the state is filtered based on playingStatus
+    const availablePlayers = players.filter(p => p.playingStatus === 'ACTIVE');
+    
+    // 2. Run simulation
+    const suggestion = suggestMatch(availablePlayers, allSessionGames, draftSettings);
+    
+    if (suggestion) {
+      setTeamA(suggestion.teamA);
+      setTeamB(suggestion.teamB);
+      setDraftType(suggestion.type.charAt(0) + suggestion.type.slice(1).toLowerCase());
+    } else {
+      alert("Not enough players to form a balanced match with current settings.");
     }
   };
 
@@ -717,6 +772,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
             <button onClick={() => setShowAudioSettings(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all border border-slate-100" title="Audio Settings">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
             </button>
+            <button onClick={() => setShowDraftSettings(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-purple-500 hover:bg-purple-50 transition-all border border-slate-100" title="Drafting Engine Settings">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            </button>
             <button onClick={() => setShowFinancialsModal(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-green-500 hover:bg-green-50 transition-all border border-slate-100 flex items-center gap-2" title="Financial Settings">
               <span className="text-[10px] font-black text-slate-600">₱{financials.collected}</span>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -790,6 +848,11 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                       <div className="flex items-center flex-wrap gap-1 mb-1 truncate">
                         <span className="text-xs font-bold text-slate-800 truncate">{p.name}</span>
                         {isPending && <span className="text-[7px] font-black bg-yellow-100 text-yellow-700 px-1 rounded uppercase tracking-tighter">Pending</span>}
+                        {p.partnerId && (
+                          <span className="text-[7px] font-black bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full uppercase tracking-tighter flex items-center gap-1">
+                            🤝 {players.find(partner => partner.id === p.partnerId)?.name.split(' ')[0] || 'Partner'}
+                          </span>
+                        )}
                         {p.playingStatus === 'INACTIVE' && (
                           <button 
                             onClick={() => setSettlingPlayer(p)}
@@ -1024,6 +1087,16 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <option>Triples</option>
               </select>
             </div>
+
+            <div className="px-6 py-2">
+              <button 
+                onClick={handleSmartSuggest}
+                className="w-full py-3 bg-purple-50 text-purple-600 border border-purple-200 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-purple-600 hover:text-white transition-all flex items-center justify-center gap-2 group shadow-sm"
+              >
+                <span className="group-hover:animate-pulse">🪄</span>
+                Smart Match Suggestions
+              </button>
+            </div>
             <div className="p-6 grid grid-cols-2 gap-6">
               {/* Team A Selection */}
               <div>
@@ -1254,6 +1327,37 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 </div>
               </div>
 
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1 flex justify-between">
+                  <span>🤝 Fix Partner</span>
+                  {editingPlayer.partnerId && (
+                    <button 
+                      type="button" 
+                      onClick={() => handleUpdatePartner(editingPlayer.id, null)}
+                      className="text-[8px] text-red-500 font-black hover:underline"
+                    >
+                      Unlink Partner
+                    </button>
+                  )}
+                </label>
+                <select 
+                  value={editingPlayer.partnerId || ''} 
+                  onChange={e => handleUpdatePartner(editingPlayer.id, e.target.value || null)}
+                  className="w-full p-4 bg-purple-50/50 border border-purple-100 rounded-xl font-bold text-xs outline-none focus:ring-2 focus:ring-purple-500 transition-all text-slate-700"
+                >
+                  <option value="">-- No Fixed Partner --</option>
+                  {players
+                    .filter(p => p.id !== editingPlayer.id && p.playingStatus === 'ACTIVE')
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.partnerId ? '(Already Linked)' : ''}
+                      </option>
+                    ))
+                  }
+                </select>
+                <p className="text-[8px] text-slate-400 mt-2 italic px-1">Fixed pairs are always drafted together in Tournament Mode.</p>
+              </div>
+
               {editingPlayer.memberId && (
                 <label className="flex items-center space-x-3 p-4 bg-blue-50 rounded-xl border border-blue-100 cursor-pointer group">
                   <input 
@@ -1441,6 +1545,98 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-xs shadow-lg mt-2"
               >
                 Close Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DRAFTING SETTINGS MODAL */}
+      {showDraftSettings && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200 border border-purple-100">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-purple-50/50">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-600 text-white rounded-xl shadow-lg shadow-purple-200">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tighter italic leading-none">Drafting Engine</h3>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Experimental Utilities</span>
+                </div>
+              </div>
+              <button onClick={() => setShowDraftSettings(false)} className="text-slate-400 hover:text-slate-600 transition-colors bg-white p-2 rounded-full shadow-sm border border-slate-100">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="space-y-5">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1 flex justify-between">
+                    <span>Skill Parity Weight</span>
+                    <span className="text-purple-600 font-black">{draftSettings.levelWeight}</span>
+                  </label>
+                  <input
+                    type="range" min="0" max="10" step="1"
+                    value={draftSettings.levelWeight}
+                    onChange={e => setDraftSettings({ ...draftSettings, levelWeight: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                  <p className="text-[8px] text-slate-400 mt-2 italic leading-relaxed">Prioritizes matching players with similar L1-L5 ratings.</p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1 flex justify-between">
+                    <span>Wait Time Bonus</span>
+                    <span className="text-purple-600 font-black">{draftSettings.idleWeight}</span>
+                  </label>
+                  <input
+                    type="range" min="0" max="10" step="1"
+                    value={draftSettings.idleWeight}
+                    onChange={e => setDraftSettings({ ...draftSettings, idleWeight: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                  <p className="text-[8px] text-slate-400 mt-2 italic leading-relaxed">Gives priority to players with the longest idle time since their last game.</p>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1 flex justify-between">
+                    <span>Variety Penalty</span>
+                    <span className="text-purple-600 font-black">{draftSettings.historyWeight}</span>
+                  </label>
+                  <input
+                    type="range" min="0" max="10" step="1"
+                    value={draftSettings.historyWeight}
+                    onChange={e => setDraftSettings({ ...draftSettings, historyWeight: parseInt(e.target.value) })}
+                    className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  />
+                  <p className="text-[8px] text-slate-400 mt-2 italic leading-relaxed">Penalizes matches with the same partners or opponents from recent games.</p>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-100">
+                <div 
+                  onClick={() => setDraftSettings({ ...draftSettings, tournamentMode: !draftSettings.tournamentMode })}
+                  className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${draftSettings.tournamentMode ? 'bg-purple-50 border-purple-200' : 'bg-slate-50 border-slate-100'}`}
+                >
+                  <div>
+                    <h4 className={`text-xs font-black uppercase tracking-tight ${draftSettings.tournamentMode ? 'text-purple-700' : 'text-slate-800'}`}>Tournament Practice Mode</h4>
+                    <p className="text-[9px] text-slate-400 mt-0.5">Enable this to prioritize "Fixed Pairs" staying together for drill sets.</p>
+                  </div>
+                  <div className={`w-10 h-5 rounded-full relative transition-colors ${draftSettings.tournamentMode ? 'bg-purple-600' : 'bg-slate-300'}`}>
+                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${draftSettings.tournamentMode ? 'left-6' : 'left-1'}`} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-100 text-center">
+              <button 
+                onClick={() => setShowDraftSettings(false)}
+                className="text-[9px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors"
+              >
+                Save & Close
               </button>
             </div>
           </div>

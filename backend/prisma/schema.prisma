@@ -128,6 +128,8 @@ model Player {
   
   statistics    PlayerStatistics[] 
   
+  partnerId     String?            // ID of another player in the same session to lock as a partner
+  
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }

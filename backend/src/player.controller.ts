@@ -36,4 +36,9 @@ export class PlayerController {
   async updatePayment(@Param('id') id: string, @Body('status') status: string, @Body('mode') mode: string) {
     return await this.playerService.updatePayment(id, status, mode);
   }
+
+  @Put(':id/partner')
+  async updatePartner(@Param('id') id: string, @Body('partnerId') partnerId: string | null) {
+    return await this.playerService.updatePartner(id, partnerId);
+  }
 }

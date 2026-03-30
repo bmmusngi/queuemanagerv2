@@ -114,4 +114,42 @@ export class PlayerService {
       },
     });
   }
+
+  // UPDATE: Partnership management
+  async updatePartner(playerId: string, partnerId: string | null) {
+    // 1. If clearing a partner
+    if (!partnerId) {
+      const player = await prisma.player.findUnique({ where: { id: playerId } });
+      if (player?.partnerId) {
+        // Clear the other side too
+        await prisma.player.update({
+          where: { id: player.partnerId },
+          data: { partnerId: null }
+        });
+      }
+      return await prisma.player.update({
+        where: { id: playerId },
+        data: { partnerId: null }
+      });
+    }
+
+    // 2. If setting a partner
+    // First, clear any existing partners they might have had
+    const p1 = await prisma.player.findUnique({ where: { id: playerId } });
+    const p2 = await prisma.player.findUnique({ where: { id: partnerId } });
+
+    if (p1?.partnerId) await this.updatePartner(playerId, null);
+    if (p2?.partnerId) await this.updatePartner(partnerId, null);
+
+    // Set reciprocally
+    await prisma.player.update({
+      where: { id: partnerId },
+      data: { partnerId: playerId }
+    });
+
+    return await prisma.player.update({
+      where: { id: playerId },
+      data: { partnerId: partnerId }
+    });
+  }
 }
