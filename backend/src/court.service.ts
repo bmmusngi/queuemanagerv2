@@ -54,11 +54,19 @@ export class CourtService {
   }
 
   // HARD DELETE: Completely remove the court
-  /*
   async deleteCourt(id: string) {
+    // Check if there's an active game on this court
+    const court = await prisma.court.findUnique({
+      where: { id },
+      include: { games: { where: { status: 'ACTIVE' } } }
+    });
+    
+    if (court?.games.length && court.games.length > 0) {
+      throw new Error("Cannot delete a court with an active game.");
+    }
+
     return await prisma.court.delete({
       where: { id },
     });
   }
-  */
 }

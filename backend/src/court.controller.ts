@@ -37,9 +37,9 @@ export class CourtController {
     return await this.courtService.updateCourt(id, updateCourtDto);
   }
 
-  // DELETE /courts/:id (Marks court as INACTIVE / Out of order)
+  // DELETE /courts/:id (Removes court completely)
   @Delete(':id')
-  async deactivate(@Param('id') id: string) {
-    return await this.courtService.deactivateCourt(id);
+  async delete(@Param('id') id: string) {
+    return await this.courtService.deleteCourt(id);
   }
 }
