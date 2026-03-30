@@ -81,7 +81,7 @@ export default function Reports() {
   }, [sessionDetails]);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="h-full overflow-y-auto space-y-6 pb-10 pr-2 custom-scrollbar">
       {/* Intro Header */}
       <div>
         <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">Post-Session Reports</h1>
