@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { suggestMatch, DraftSettings } from '../utils/draft.utils';
 
 export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { selectedGroupId?: string, onSessionUpdate?: (session: any) => void }) {
@@ -6,6 +7,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [activeSession, setActiveSession] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
+  const [showLobbyModal, setShowLobbyModal] = useState(false);
 
   // Update parent dashboard whenever activeSession changes
   useEffect(() => {
@@ -769,6 +771,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
           <div className="flex space-x-2 border-l pl-6 border-slate-100">
             <button onClick={() => setShowAddPlayerModal(true)} className="text-[10px] font-black bg-blue-600 text-white px-4 py-2 rounded-lg uppercase tracking-wider shadow-sm">+ Add Player</button>
             <button onClick={() => setShowDraftModal(true)} className="text-[10px] font-black bg-slate-100 text-slate-600 px-4 py-2 rounded-lg uppercase tracking-wider">Draft Game</button>
+            <button onClick={() => setShowLobbyModal(true)} className="text-[10px] font-black bg-purple-50 text-purple-600 px-4 py-2 rounded-lg uppercase tracking-wider flex items-center gap-2 border border-purple-100">
+               <span className="animate-pulse">📡</span> Share Lobby
+            </button>
             <button onClick={() => setShowAudioSettings(true)} className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-all border border-slate-100" title="Audio Settings">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
             </button>
@@ -1638,6 +1643,55 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               >
                 Save & Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SHARE LOBBY MODAL */}
+      {showLobbyModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 bg-purple-600 text-white flex justify-between items-center">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest italic">Share Public Lobby</h3>
+                <p className="text-[10px] text-purple-200 font-bold uppercase mt-1">For player viewing only</p>
+              </div>
+              <button onClick={() => setShowLobbyModal(false)} className="hover:text-purple-200">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            <div className="p-8 flex flex-col items-center space-y-6 text-center">
+              <div className="p-4 bg-white rounded-3xl shadow-2xl shadow-purple-100 border-4 border-purple-50">
+                <QRCodeSVG 
+                  value={`${window.location.origin}/lobby/${activeSession.id}`} 
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-tight">Players can scan this to see</p>
+                <div className="flex flex-wrap justify-center gap-2">
+                   {['Live Match Score', 'On-Deck List', 'Waitlist Status'].map(tag => (
+                     <span key={tag} className="text-[8px] font-black bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase">{tag}</span>
+                   ))}
+                </div>
+              </div>
+
+              <div className="w-full pt-4 border-t border-slate-50">
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/lobby/${activeSession.id}`);
+                    alert("Lobby link copied to clipboard!");
+                  }}
+                  className="w-full py-3 bg-slate-900 text-white font-black rounded-xl uppercase tracking-widest text-[9px] hover:bg-slate-800 transition-all"
+                >
+                  Copy Link to Share
+                </button>
+              </div>
             </div>
           </div>
         </div>
