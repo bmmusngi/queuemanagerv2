@@ -108,7 +108,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   };
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6 pb-32">
       {/* Group Selector */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">Selected Group</label>
@@ -163,7 +163,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
               </div>
 
               {/* THE SCROLLABLE WRAPPER */}
-              <div className="max-h-[600px] overflow-y-auto overflow-x-auto">
+              <div className="max-h-[75vh] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
                     <tr className="text-[10px] font-black text-slate-400 uppercase">
