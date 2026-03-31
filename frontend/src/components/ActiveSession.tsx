@@ -229,13 +229,18 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     }
   };
 
-  // Helper to find idle time
-  const getIdleTime = (playerId: string) => {
+  // Helper to find idle time. For players who have never played, counts from their
+  // createdAt (join time) so the queue wait is always reflected in the display.
+  const getIdleTime = (player: any) => {
     const playerGames = allSessionGames.filter(g =>
       g.status === 'COMPLETED' &&
-      ([...(g.teamA || []), ...(g.teamB || [])].some((p: any) => p.id === playerId))
+      ([...(g.teamA || []), ...(g.teamB || [])].some((p: any) => p.id === player.id))
     );
-    if (playerGames.length === 0) return Infinity; // Never played = most idle
+
+    if (playerGames.length === 0) {
+      // Never played — count from when the player joined the session
+      return player.createdAt ? Date.now() - new Date(player.createdAt).getTime() : 0;
+    }
 
     const lastGame = playerGames.reduce((latest, current) => {
       const latestDate = new Date(latest.endedAt || 0).getTime();
@@ -264,8 +269,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       if (sortBy === 'alphabetical') {
         comparison = a.name.localeCompare(b.name);
       } else if (sortBy === 'idleTime') {
-        const idleA = getIdleTime(a.id);
-        const idleB = getIdleTime(b.id);
+        const idleA = getIdleTime(a);
+        const idleB = getIdleTime(b);
         comparison = idleA - idleB;
       } else if (sortBy === 'waitTime') {
         // Simple wait time logic (createdAt)
@@ -790,10 +795,10 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       </div>
 
       {/* KANBAN */}
-      <div className="flex flex-1 space-x-6 overflow-x-auto pb-8">
+      <div className="flex flex-1 space-x-6 overflow-x-auto pb-8 max-h-[calc(100vh-290px)]">
 
         {/* PLAYER COLUMN */}
-        <div className="w-72 flex-shrink-0 flex flex-col space-y-3">
+        <div className="w-72 flex-shrink-0 flex flex-col space-y-3 min-h-0">
           {/* Filtering Tabs */}
           <div className="flex bg-slate-100 p-1 rounded-xl mx-2">
             {['All', 'Active', 'Available'].map((f) => (
@@ -834,7 +839,8 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
           <div className="flex-1 space-y-2 overflow-y-auto pr-1">
             {processedPlayers.map(p => {
               const isPending = Array.isArray(pendingGames) && pendingGames.some(g => [...(g.teamA || []), ...(g.teamB || [])].some((player: any) => player.id === p.id));
-              const idleMinutes = getIdleTime(p.id) === Infinity ? '-' : Math.floor(getIdleTime(p.id) / (1000 * 60));
+              const idleMs = getIdleTime(p);
+              const idleMinutes = Math.floor(idleMs / (1000 * 60));
 
               return (
                 <div key={p.id} className={`p-3 rounded-xl border-2 transition-all shadow-sm group relative ${p.playingStatus === 'INACTIVE' ? 'bg-slate-50 border-slate-100 opacity-60 grayscale' : 'bg-white border-transparent'}`}>
@@ -869,7 +875,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                       </div>
                       <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
                         <span>{p.gamesPlayed || 0} Games</span>
-                        <span>{idleMinutes === '-' ? 'Waiting' : `${idleMinutes}m Idle`}</span>
+                        <span>{idleMinutes}m {(p.gamesPlayed || 0) === 0 ? 'Waiting' : 'Idle'}</span>
                       </div>
                     </div>
 
