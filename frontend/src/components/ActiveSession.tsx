@@ -213,19 +213,22 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   };
 
   const handleSmartSuggest = () => {
-    // 1. Get available players (ACTIVE and not playing)
-    // Actually our 'Available' logic in the state is filtered based on playingStatus
-    const availablePlayers = players.filter(p => p.playingStatus === 'ACTIVE');
-    
-    // 2. Run simulation
+    // Get truly available players: ACTIVE and NOT already locked into a pending game.
+    // Pre-attach idleTimeMs and sort most-idle-first so suggestMatch picks the
+    // longest-waiting players when there are more candidates than spots.
+    const availablePlayers = players
+      .filter(p => p.playingStatus === 'ACTIVE' && !pendingPlayerIds.has(p.id))
+      .map(p => ({ ...p, idleTimeMs: getIdleTime(p) }))
+      .sort((a, b) => b.idleTimeMs - a.idleTimeMs); // descending: most idle first
+
     const suggestion = suggestMatch(availablePlayers, allSessionGames, draftSettings);
-    
+
     if (suggestion) {
       setTeamA(suggestion.teamA);
       setTeamB(suggestion.teamB);
       setDraftType(suggestion.type.charAt(0) + suggestion.type.slice(1).toLowerCase());
     } else {
-      alert("Not enough players to form a balanced match with current settings.");
+      alert("Not enough available players to form a balanced match.");
     }
   };
 
@@ -284,6 +287,14 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
     return list;
   }, [players, filterBy, sortBy, sortDirection, allSessionGames]);
+
+  // IDs of players already committed to a pending (drafted but not yet started) game.
+  // These players are still ACTIVE in status but should not be selectable again.
+  const pendingPlayerIds = React.useMemo(() => {
+    return new Set<string>(
+      pendingGames.flatMap(g => [...(g.teamA || []), ...(g.teamB || [])].map((p: any) => p.id))
+    );
+  }, [pendingGames]);
 
   // Financial Metrics
   const financials = React.useMemo(() => {
@@ -1113,7 +1124,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               <div>
                 <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest">Team A</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !teamB.find(t => t.id === p.id)).map(p => (
+                  {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !pendingPlayerIds.has(p.id) && !teamB.find(t => t.id === p.id)).map(p => (
                     <button
                       key={p.id}
                       onClick={() => teamA.find(t => t.id === p.id) ? setTeamA(teamA.filter(t => t.id !== p.id)) : setTeamA([...teamA, p])}
@@ -1128,7 +1139,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               <div>
                 <h4 className="text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest">Team B</h4>
                 <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !teamA.find(t => t.id === p.id)).map(p => (
+                  {Array.isArray(players) && players.filter(p => p.playingStatus === 'ACTIVE' && !pendingPlayerIds.has(p.id) && !teamA.find(t => t.id === p.id)).map(p => (
                     <button
                       key={p.id}
                       onClick={() => teamB.find(t => t.id === p.id) ? setTeamB(teamB.filter(t => t.id !== p.id)) : setTeamB([...teamB, p])}

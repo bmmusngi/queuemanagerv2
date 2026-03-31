@@ -16,6 +16,7 @@ export interface Player {
   levelWeight: number;
   partnerId?: string | null;
   playingStatus: string;
+  idleTimeMs?: number; // Pre-computed idle time; higher = waited longer
   // ... other fields
 }
 
@@ -69,10 +70,11 @@ export const suggestMatch = (
     teamA = partners[0];
     teamB = singles.slice(0, 2);
   } else if (singles.length >= 4) {
-    // Standard: (Single + Single) vs (Single + Single)
-    // For now, take the first 4 (most idle if the input is sorted)
-    teamA = [singles[0], singles[1]];
-    teamB = [singles[2], singles[3]];
+    // Sort singles by idle time descending (most idle first) before picking.
+    // idleTimeMs is pre-computed by the caller; fall back to 0 if absent.
+    const sorted = [...singles].sort((a, b) => (b.idleTimeMs ?? 0) - (a.idleTimeMs ?? 0));
+    teamA = [sorted[0], sorted[1]];
+    teamB = [sorted[2], sorted[3]];
   } else {
     return null; // Not enough players to form a full doubles match
   }
