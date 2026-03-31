@@ -48,16 +48,21 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     };
   });
 
-  // Hydrate voices
+  // Hydrate voices.
+  // Some Chromium-based browsers (e.g. Opera on Android) don't reliably fire
+  // onvoiceschanged, so we also schedule a fallback load after a short delay.
   useEffect(() => {
     if (!window.speechSynthesis) return;
     const loadVoices = () => {
       const voices = window.speechSynthesis.getVoices();
-      setAvailableVoices(voices);
+      if (voices.length > 0) setAvailableVoices(voices);
     };
     loadVoices();
     window.speechSynthesis.onvoiceschanged = loadVoices;
+    // Fallback: retry after 500ms for browsers that never fire onvoiceschanged
+    const retryTimer = setTimeout(loadVoices, 500);
     return () => {
+      clearTimeout(retryTimer);
       if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = null;
     };
   }, []);
@@ -628,11 +633,12 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     const teamNamesA = game.teamA?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team A';
     const teamNamesB = game.teamB?.map((p: any) => p.phoneticAlias || p.name).join(' and ') || 'Team B';
 
-    // Build custom dialogue from template
+    // Build custom dialogue from template.
+    // Use case-insensitive regex so old templates with e.g. {Court} or {TeamA} still work.
     let dialogue = ttsSettings.template
-      .replace(/{court}/g, courtName)
-      .replace(/{teamA}/g, teamNamesA)
-      .replace(/{teamB}/g, teamNamesB);
+      .replace(/{court}/gi, courtName)
+      .replace(/{teamA}/gi, teamNamesA)
+      .replace(/{teamB}/gi, teamNamesB);
 
     const message = new SpeechSynthesisUtterance(dialogue);
 
@@ -640,9 +646,16 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     message.rate = ttsSettings.rate;
     message.pitch = ttsSettings.pitch;
 
+    // Only apply the stored voice if it actually exists in the current browser.
+    // If not found, fall back to system default to avoid silent failures on Opera etc.
     if (ttsSettings.voiceUri) {
       const selectedVoice = availableVoices.find(v => v.voiceURI === ttsSettings.voiceUri);
-      if (selectedVoice) message.voice = selectedVoice;
+      if (selectedVoice) {
+        message.voice = selectedVoice;
+      } else {
+        // Voice from settings not available in this browser — clear it silently
+        setTtsSettings(prev => ({ ...prev, voiceUri: '' }));
+      }
     }
 
     window.speechSynthesis.speak(message);
@@ -1029,8 +1042,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                       <div className="flex space-x-2">
                         <button
                           onClick={() => announceMatchup(c.name, c.game)}
-                          title="Announce Matchup on Speaker"
-                          className="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border border-blue-100"
+                          disabled={!window.speechSynthesis}
+                          title={window.speechSynthesis ? 'Announce Matchup on Speaker' : 'Text-to-speech not supported in this browser (use Chrome)'}
+                          className={`p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border ${window.speechSynthesis ? 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white border-blue-100' : 'bg-slate-100 text-slate-300 border-slate-200 cursor-not-allowed'}`}
                         >
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
                         </button>
@@ -1228,6 +1242,16 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
             </div>
 
             <div className="p-6 space-y-6">
+              {/* BROWSER COMPATIBILITY WARNING */}
+              {!window.speechSynthesis && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                  <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+                  <div>
+                    <p className="text-[11px] font-black text-amber-800 uppercase tracking-wide">Not supported in this browser</p>
+                    <p className="text-[10px] text-amber-700 mt-0.5">Text-to-speech requires Chrome. Opera and DuckDuckGo do not support this feature.</p>
+                  </div>
+                </div>
+              )}
               {/* VOICE SELECTION */}
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Voice Assistant</label>
@@ -1267,7 +1291,15 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
               {/* TEMPLATE */}
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Dialogue Template</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Dialogue Template</label>
+                  <button
+                    onClick={() => setTtsSettings(prev => ({ ...prev, template: 'Game assigned to {court}. {teamA}, versus, {teamB}.' }))}
+                    className="text-[9px] font-black text-blue-500 uppercase tracking-wider hover:text-blue-700 transition-colors"
+                  >
+                    Reset Default
+                  </button>
+                </div>
                 <textarea
                   value={ttsSettings.template}
                   onChange={e => setTtsSettings({ ...ttsSettings, template: e.target.value })}
@@ -1279,6 +1311,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                   <span>{'{court}'}</span>
                   <span>{'{teamA}'}</span>
                   <span>{'{teamB}'}</span>
+                  <span className="ml-auto opacity-60 normal-case">Case-insensitive</span>
                 </div>
               </div>
 
