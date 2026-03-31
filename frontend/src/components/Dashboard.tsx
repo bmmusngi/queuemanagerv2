@@ -39,6 +39,19 @@ export const DashboardLayout = () => {
           <div className={activeTab === 'reports' ? 'block h-full' : 'hidden h-full'}><Reports /></div>
         </div>
       </main>
+
+      {/* Global Footer */}
+      <footer className="shrink-0 border-t border-slate-200 bg-white py-4 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-1 text-[11px] text-slate-400">
+          <span>© {new Date().getFullYear()} ShiroBen@PuticatPlays. All rights reserved.</span>
+          <a
+            href="mailto:puticatplays@gmail.com"
+            className="hover:text-slate-600 transition-colors underline underline-offset-2"
+          >
+            puticatplays@gmail.com
+          </a>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -108,7 +108,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
   };
 
   return (
-    <div className="space-y-6 pb-32">
+    <div className="space-y-6 pb-6">
       {/* Group Selector */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-widest">Selected Group</label>
