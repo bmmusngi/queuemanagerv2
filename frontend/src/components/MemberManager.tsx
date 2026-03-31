@@ -163,7 +163,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
               </div>
 
               {/* THE SCROLLABLE WRAPPER */}
-              <div className="max-h-[75vh] overflow-y-auto overflow-x-auto">
+              <div className="max-h-[calc(100vh-360px)] overflow-y-auto overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[600px]">
                   <thead className="sticky top-0 bg-white z-10 border-b border-slate-200">
                     <tr className="text-[10px] font-black text-slate-400 uppercase">
