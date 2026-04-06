@@ -90,6 +90,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   // Active players in the current session
   const [players, setPlayers] = useState<any[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
+  const [editingGame, setEditingGame] = useState<any>(null);
   const [editingPlayer, setEditingPlayer] = useState<any>(null);
   const [settlingPlayer, setSettlingPlayer] = useState<any>(null);
   const [syncMember, setSyncMember] = useState(false);
@@ -241,7 +242,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   // createdAt (join time) so the queue wait is always reflected in the display.
   const getIdleTime = (player: any) => {
     const playerGames = allSessionGames.filter(g =>
-      g.status === 'COMPLETED' &&
+      (g.status === 'COMPLETED' || g.status === 'CANCELLED') &&
       ([...(g.teamA || []), ...(g.teamB || [])].some((p: any) => p.id === player.id))
     );
 
@@ -519,6 +520,77 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const onDrop = async (e: any, courtId: string) => {
     const gameId = e.dataTransfer.getData("gameId");
     if (gameId) handleStartGame(gameId, courtId);
+  };
+  const handleUpdateGame = async () => {
+    if (!editingGame) return;
+
+    // We only update type and teams for pending games
+    const gameData = {
+      type: editingGame.type,
+      teamA: { set: editingGame.teamA.map((p: any) => ({ id: p.id })) },
+      teamB: { set: editingGame.teamB.map((p: any) => ({ id: p.id })) },
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/games/${editingGame.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gameData)
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setPendingGames(prev => prev.map(g => g.id === updated.id ? updated : g));
+        setAllSessionGames(prev => prev.map(g => g.id === updated.id ? updated : g));
+        setEditingGame(null);
+      }
+    } catch (err) {
+      console.error("Failed to update game:", err);
+    }
+  };
+
+  const handleCancelGame = async (gameId: string) => {
+    if (!confirm("Are you sure you want to cancel this game?")) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/games/${gameId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        const cancelledGame = await res.json();
+        
+        // 1. Remove from pending games if it's there
+        setPendingGames(prev => prev.filter(g => g.id !== gameId));
+        
+        // 2. Clear from court if it's active
+        if (activeSession?.courts) {
+          const updatedCourts = activeSession.courts.map((c: any) =>
+            c.game?.id === gameId ? { ...c, status: 'ACTIVE', game: null } : c
+          );
+          setActiveSession({ ...activeSession, courts: updatedCourts });
+        }
+
+        // 3. Update allSessionGames to reflect CANCELLED status (for idle time)
+        // Note: The backend now returns the game with CANCELLED status and endedAt set.
+        setAllSessionGames(prev => {
+          const exists = prev.find(g => g.id === gameId);
+          if (exists) {
+            return prev.map(g => g.id === gameId ? { ...g, ...cancelledGame } : g);
+          } else {
+            return [...prev, cancelledGame];
+          }
+        });
+
+        // 4. Reset player statuses locally
+        const affectedPlayerIds = [...(cancelledGame.teamA || []), ...(cancelledGame.teamB || [])].map((p: any) => p.id);
+        setPlayers(prev => prev.map(p => 
+          affectedPlayerIds.includes(p.id) ? { ...p, playingStatus: 'ACTIVE' } : p
+        ));
+
+        if (selectedGameId === gameId) setSelectedGameId(null);
+      }
+    } catch (err) {
+      console.error("Failed to cancel game:", err);
+    }
   };
 
   const handleCompleteGame = async () => {
@@ -899,7 +971,9 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                       </div>
                       <div className="flex space-x-3 text-[8px] font-black text-slate-400 uppercase tracking-tighter">
                         <span>{p.gamesPlayed || 0} Games</span>
-                        <span>{idleMinutes}m {(p.gamesPlayed || 0) === 0 ? 'Waiting' : 'Idle'}</span>
+                        <span className={p.playingStatus === 'PLAYING' ? 'text-blue-600 animate-pulse' : ''}>
+                          {p.playingStatus === 'PLAYING' ? 'Playing' : `${idleMinutes}m ${(p.gamesPlayed || 0) === 0 ? 'Waiting' : 'Idle'}`}
+                        </span>
                       </div>
                     </div>
 
@@ -968,9 +1042,27 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                   onContextMenu={(e) => e.preventDefault()}
                   onClick={() => setSelectedGameId(selectedGameId === game.id ? null : game.id)}
                   style={{ userSelect: 'none', WebkitUserSelect: 'none', touchAction: 'none' }}
-                  className={`p-4 rounded-xl shadow-sm border-2 transition-all cursor-grab active:cursor-grabbing ${selectedGameId === game.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:border-blue-400'}`}
+                  className={`p-4 rounded-xl shadow-sm border-2 transition-all cursor-grab active:cursor-grabbing group relative ${selectedGameId === game.id ? 'bg-blue-50 border-blue-500 ring-2 ring-blue-200' : 'bg-white border-slate-200 hover:border-blue-400'}`}
                 >
-                  <div className="text-[8px] font-black text-blue-600 uppercase mb-2">{game.type}</div>
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="text-[8px] font-black text-blue-600 uppercase">{game.type}</div>
+                    <div className="flex gap-1 -mt-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setEditingGame(game); }}
+                        className="p-1 rounded-md bg-slate-50 text-slate-400 hover:bg-blue-600 hover:text-white transition-colors shadow-sm"
+                        title="Edit Pending Game"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                      </button>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleCancelGame(game.id); }}
+                        className="p-1 rounded-md bg-slate-50 text-slate-400 hover:bg-red-600 hover:text-white transition-colors shadow-sm"
+                        title="Cancel Game"
+                      >
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    </div>
+                  </div>
                   <div className="flex justify-between items-center text-[10px] font-bold text-slate-700">
                     <span>{game.teamA?.map(p => p.name).join(' & ')}</span>
                     <span className="text-slate-300 mx-2">VS</span>
@@ -1054,6 +1146,13 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                           className="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white px-4 py-2 rounded-full text-[10px] font-black uppercase transition-colors flex items-center justify-center shadow-sm border border-green-100"
                         >
                           Finish
+                        </button>
+                        <button
+                          onClick={() => handleCancelGame(c.game.id)}
+                          title="Void/Cancel Game"
+                          className="bg-red-50 text-red-400 hover:bg-red-600 hover:text-white p-2 rounded-full transition-colors flex items-center justify-center shadow-sm border border-red-100"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
                     </>
@@ -1184,6 +1283,103 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
             <div className="p-6 bg-slate-50 flex space-x-3">
               <button onClick={handleDraftGame} className="flex-1 py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest text-xs">Add to Pending</button>
               <button onClick={() => setShowDraftModal(false)} className="px-8 py-4 bg-white text-slate-400 font-black rounded-2xl uppercase tracking-widest text-xs border border-slate-200">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT PENDING GAME MODAL */}
+      {editingGame && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-blue-100">
+            <div className="p-6 border-b flex justify-between items-center bg-blue-50/30">
+              <div>
+                <h3 className="text-lg font-black text-slate-800 uppercase italic leading-none">Edit Pending Game</h3>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Update teams or match type</span>
+              </div>
+              <select 
+                value={editingGame.type} 
+                onChange={e => setEditingGame({ ...editingGame, type: e.target.value, teamA: [], teamB: [] })} 
+                className="p-2 bg-white rounded-lg text-xs font-bold border border-slate-200 shadow-sm"
+              >
+                <option>Singles</option>
+                <option>Doubles</option>
+                <option>Triples</option>
+              </select>
+            </div>
+
+            <div className="p-6 grid grid-cols-2 gap-6">
+              {/* Team A Selection */}
+              <div>
+                <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3 tracking-widest px-1">Team A</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {Array.isArray(players) && players
+                    .filter(p => 
+                      p.playingStatus === 'ACTIVE' && 
+                      (!pendingPlayerIds.has(p.id) || editingGame.teamA?.find((t: any) => t.id === p.id) || editingGame.teamB?.find((t: any) => t.id === p.id)) && 
+                      !editingGame.teamB?.find((t: any) => t.id === p.id)
+                    )
+                    .map(p => {
+                      const isSelected = editingGame.teamA?.find((t: any) => t.id === p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => isSelected 
+                            ? setEditingGame({ ...editingGame, teamA: editingGame.teamA.filter((t: any) => t.id !== p.id) }) 
+                            : setEditingGame({ ...editingGame, teamA: [...(editingGame.teamA || []), p] })
+                          }
+                          className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })
+                  }
+                </div>
+              </div>
+              {/* Team B Selection */}
+              <div>
+                <h4 className="text-[10px] font-black text-red-600 uppercase mb-3 tracking-widest px-1">Team B</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                  {Array.isArray(players) && players
+                    .filter(p => 
+                      p.playingStatus === 'ACTIVE' && 
+                      (!pendingPlayerIds.has(p.id) || editingGame.teamA?.find((t: any) => t.id === p.id) || editingGame.teamB?.find((t: any) => t.id === p.id)) && 
+                      !editingGame.teamA?.find((t: any) => t.id === p.id)
+                    )
+                    .map(p => {
+                      const isSelected = editingGame.teamB?.find((t: any) => t.id === p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          onClick={() => isSelected 
+                            ? setEditingGame({ ...editingGame, teamB: editingGame.teamB.filter((t: any) => t.id !== p.id) }) 
+                            : setEditingGame({ ...editingGame, teamB: [...(editingGame.teamB || []), p] })
+                          }
+                          className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${isSelected ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-100' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-50 flex space-x-3">
+              <button 
+                onClick={handleUpdateGame} 
+                className="flex-1 py-4 bg-blue-600 text-white font-black rounded-2xl uppercase tracking-widest text-xs shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+              >
+                Save Changes
+              </button>
+              <button 
+                onClick={() => setEditingGame(null)} 
+                className="px-8 py-4 bg-white text-slate-400 font-black rounded-2xl uppercase tracking-widest text-xs border border-slate-200 transition-all hover:bg-slate-50"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

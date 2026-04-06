@@ -60,6 +60,11 @@ export class GameService {
     return await prisma.game.update({
       where: { id },
       data,
+      include: {
+        teamA: true,
+        teamB: true,
+        court: true,
+      }
     });
   }
 
@@ -144,9 +149,32 @@ export class GameService {
 
   // SOFT DELETE: Cancel a queued game
   async cancelGame(id: string) {
+    const game = await prisma.game.findUnique({
+      where: { id },
+      include: { teamA: true, teamB: true }
+    });
+
+    if (game) {
+      const allPlayers = [...(game.teamA || []), ...(game.teamB || [])];
+      for (const p of allPlayers) {
+        await prisma.player.update({
+          where: { id: p.id },
+          data: { playingStatus: 'ACTIVE' }
+        });
+      }
+    }
+
     return await prisma.game.update({
       where: { id },
-      data: { status: 'CANCELLED' },
+      data: { 
+        status: 'CANCELLED',
+        endedAt: new Date()
+      },
+      include: {
+        teamA: true,
+        teamB: true,
+        court: true,
+      }
     });
   }
 
