@@ -2,6 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { suggestMatch, DraftSettings } from '../utils/draft.utils';
 
+const GAME_TYPE_LIMITS: Record<string, number> = {
+  'Singles': 1,
+  'Doubles': 2,
+  'Triples': 3,
+};
+
 export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { selectedGroupId?: string, onSessionUpdate?: (session: any) => void }) {
   // --- SESSION STATE ---
   const [activeSession, setActiveSession] = useState<any>(null);
@@ -451,6 +457,21 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   // --- GAME DRAFTING & DND ---
   const handleDraftGame = async () => {
+    const limit = GAME_TYPE_LIMITS[draftType] || 2;
+    
+    // 1. Over-limit check (Strict Block)
+    if (teamA.length > limit || teamB.length > limit) {
+      alert(`Invalid Draft: ${draftType} matches only allow ${limit} player(s) per team. Please remove extra players.`);
+      return;
+    }
+
+    // 2. Under-limit check (Warning/Override)
+    if (teamA.length < limit || teamB.length < limit) {
+      if (!confirm(`Warning: ${draftType} matches typically require ${limit} player(s) per team. Proceed with this incomplete match?`)) {
+        return;
+      }
+    }
+
     const gameData = {
       sessionId: activeSession.id,
       type: draftType,
@@ -487,6 +508,19 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   };
 
   const handleStartGame = async (gameId: string, courtId: string) => {
+    // Validation: Prevent assignment of incomplete games to a court
+    const game = pendingGames.find(g => g.id === gameId);
+    if (game) {
+      const limit = GAME_TYPE_LIMITS[game.type] || 2;
+      const teamACount = game.teamA?.length || 0;
+      const teamBCount = game.teamB?.length || 0;
+
+      if (teamACount < limit || teamBCount < limit) {
+        alert(`Cannot Start Match: ${game.type} requires ${limit} player(s) per team. This game is incomplete (${teamACount} vs ${teamBCount}). Please edit the game teams first.`);
+        return;
+      }
+    }
+
     try {
       const res = await fetch(`${API_BASE}/games/${gameId}/start`, {
         method: 'PUT',
@@ -523,6 +557,23 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   };
   const handleUpdateGame = async () => {
     if (!editingGame) return;
+
+    const limit = GAME_TYPE_LIMITS[editingGame.type] || 2;
+    const teamACount = editingGame.teamA?.length || 0;
+    const teamBCount = editingGame.teamB?.length || 0;
+
+    // 1. Over-limit check (Strict Block)
+    if (teamACount > limit || teamBCount > limit) {
+      alert(`Invalid Update: ${editingGame.type} matches only allow ${limit} player(s) per team. Please remove extra players.`);
+      return;
+    }
+
+    // 2. Under-limit check (Warning/Override)
+    if (teamACount < limit || teamBCount < limit) {
+      if (!confirm(`Warning: ${editingGame.type} matches typically require ${limit} player(s) per team. Save this incomplete match anyway?`)) {
+        return;
+      }
+    }
 
     // We only update type and teams for pending games
     const gameData = {
