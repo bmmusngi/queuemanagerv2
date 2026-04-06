@@ -860,7 +860,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
 
   // --- 2. ACTIVE BOARD ---
   return (
-    <div className="flex flex-col h-full space-y-4 relative">
+    <div className="flex flex-col min-h-full space-y-4 relative pb-32">
 
       {/* SUB-HEADER */}
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
@@ -1709,7 +1709,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar pb-20">
               {/* Stats Grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-green-50 p-4 rounded-2xl border border-green-100">

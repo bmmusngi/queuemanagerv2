@@ -3,7 +3,7 @@ import GameHistoryTable from './GameHistoryTable';
 
 export default function History({ globalSession }: { globalSession?: any }) {
   return (
-    <div className="space-y-6 pb-10">
+    <div className="h-full overflow-y-auto space-y-6 pb-32 pr-2 custom-scrollbar">
       {/* Intro Header */}
       <div>
         <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">Active Game History</h1>

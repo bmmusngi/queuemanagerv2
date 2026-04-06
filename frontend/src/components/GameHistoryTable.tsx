@@ -68,9 +68,9 @@ export default function GameHistoryTable({ sessionId }: { sessionId?: string }) 
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto max-h-[min(600px,70vh)] overflow-y-auto custom-scrollbar">
         <table className="w-full text-left border-collapse min-w-[600px]">
-          <thead className="bg-white border-b border-slate-200">
+          <thead className="sticky top-0 bg-white border-b border-slate-200 z-10 shadow-sm">
             <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <th className="p-4">Time Completed</th>
               <th className="p-4">Team A</th>

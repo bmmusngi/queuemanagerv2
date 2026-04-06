@@ -81,7 +81,7 @@ export default function Reports() {
   }, [sessionDetails]);
 
   return (
-    <div className="h-full overflow-y-auto space-y-6 pb-10 pr-2 custom-scrollbar">
+    <div className="h-full overflow-y-auto space-y-6 pb-32 pr-2 custom-scrollbar">
       {/* Intro Header */}
       <div>
         <h1 className="text-xl font-black text-slate-800 uppercase tracking-tight">Post-Session Reports</h1>
@@ -151,7 +151,7 @@ export default function Reports() {
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Unpaid Balances</h3>
                     <span className="bg-red-100 text-red-700 text-[10px] font-black px-2 py-0.5 rounded-full">{financials.unpaidPlayers.length}</span>
                   </div>
-                  <div className="p-4 space-y-3 max-h-80 overflow-y-auto">
+                  <div className="p-4 space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
                     {financials.unpaidPlayers.length === 0 ? (
                       <p className="text-[10px] font-bold text-slate-400 uppercase text-center py-4 italic opacity-60">All debts settled</p>
                     ) : (
