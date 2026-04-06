@@ -15,6 +15,11 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [showEndModal, setShowEndModal] = useState(false);
   const [showLobbyModal, setShowLobbyModal] = useState(false);
 
+  // Resume Session State
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [historySessions, setHistorySessions] = useState<any[]>([]);
+  const [selectedHistorySessionId, setSelectedHistorySessionId] = useState<string>('');
+
   // Update parent dashboard whenever activeSession changes
   useEffect(() => {
     if (onSessionUpdate) {
@@ -371,6 +376,21 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
     }
   }, [showAddPlayerModal, activeSession?.queueingGroupId, activeSession?.groupId, activeSession?.id]);
 
+  // Fetch history sessions when resume modal opens
+  useEffect(() => {
+    if (showResumeModal) {
+      fetch(`${API_BASE}/sessions/history`)
+        .then(res => res.json())
+        .then(data => {
+          setHistorySessions(data || []);
+          if (data && data.length > 0) {
+            setSelectedHistorySessionId(data[0].id);
+          }
+        })
+        .catch(err => console.error("Error loading historical sessions:", err));
+    }
+  }, [showResumeModal]);
+
   // --- ACTIONS ---
   const handleStartSession = async () => {
     try {
@@ -393,6 +413,24 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       }
     } catch (err) {
       console.error("Failed to start session:", err);
+    }
+  };
+
+  const handleResumeSession = async () => {
+    if (!selectedHistorySessionId) return;
+    try {
+      const res = await fetch(`${API_BASE}/sessions/${selectedHistorySessionId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ACTIVE' }) // Set status back to ACTIVE
+      });
+      if (res.ok) {
+        const resumedSession = await res.json();
+        setActiveSession(resumedSession);
+        setShowResumeModal(false);
+      }
+    } catch (err) {
+      console.error("Failed to resume session:", err);
     }
   };
 
@@ -831,11 +869,74 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
       <div className="h-full flex flex-col items-center justify-center p-6 pb-24">
         <div className="bg-white p-10 rounded-3xl shadow-xl border border-slate-200 text-center max-w-sm w-full">
           <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl">🏸</div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-2 italic">No Active Session</h2>
-          <button onClick={() => setShowCreateModal(true)} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg">
-            Create Session
-          </button>
+          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mb-6 italic">No Active Session</h2>
+          <div className="space-y-3">
+            <button onClick={() => setShowCreateModal(true)} className="w-full py-4 bg-slate-900 text-white font-black rounded-2xl uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg">
+              Create New Session
+            </button>
+            <button onClick={() => setShowResumeModal(true)} className="w-full py-4 bg-blue-50 text-blue-600 font-black rounded-2xl uppercase tracking-widest hover:bg-blue-100 transition-all shadow-sm border border-blue-100">
+              Resume Past Session
+            </button>
+          </div>
         </div>
+
+        {showResumeModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl">
+              <h3 className="text-xl font-black text-slate-800 mb-2 uppercase tracking-tight">Resume Session</h3>
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-6">Load an existing session to continue play</p>
+              
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto mb-6 pr-2">
+                {historySessions.length === 0 ? (
+                  <p className="text-sm text-slate-400 font-bold text-center py-8">No past sessions found.</p>
+                ) : (
+                  historySessions.map(session => (
+                    <button
+                      key={session.id}
+                      onClick={() => setSelectedHistorySessionId(session.id)}
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all relative group ${
+                        selectedHistorySessionId === session.id 
+                          ? 'bg-blue-50 border-blue-600 shadow-md shadow-blue-100' 
+                          : 'bg-white border-slate-200 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs font-black text-slate-800 uppercase">{session.queueingGroup?.name || 'Unknown Group'}</span>
+                        <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-full ${
+                          session.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
+                          session.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                          session.status === 'CANCELLED' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {session.status}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest space-y-1">
+                        <p>📍 {session.venue}</p>
+                        <p>🕒 {new Date(session.createdAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t border-slate-100">
+                <button 
+                  onClick={handleResumeSession} 
+                  disabled={!selectedHistorySessionId}
+                  className="flex-1 py-4 bg-blue-600 disabled:bg-slate-300 disabled:text-slate-500 text-white font-black rounded-xl uppercase tracking-widest shadow-md shadow-blue-100 hover:bg-blue-700 transition-all text-xs"
+                >
+                  Resume Selection
+                </button>
+                <button 
+                  onClick={() => setShowResumeModal(false)} 
+                  className="flex-1 py-4 bg-slate-100 text-slate-500 hover:text-slate-700 font-black rounded-xl uppercase tracking-widest text-xs transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {showCreateModal && (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-6">
