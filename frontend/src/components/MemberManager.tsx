@@ -8,10 +8,10 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
 
   // Edit State
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: '', gender: 'Male', levelWeight: 1 });
+  const [editForm, setEditForm] = useState({ name: '', gender: 'Male', levelWeight: 2 });
 
   // Registration State
-  const [singleMember, setSingleMember] = useState({ name: '', gender: 'Male', levelWeight: 1 });
+  const [singleMember, setSingleMember] = useState({ name: '', gender: 'Male', levelWeight: 2 });
   const [bulkText, setBulkText] = useState('');
 
   const API_BASE = 'http://100.88.175.25:8459/api';
@@ -82,7 +82,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
       body: JSON.stringify({ ...singleMember, groupId: selectedGroupId })
     });
     if (response.ok) {
-      setSingleMember({ name: '', gender: 'Male', levelWeight: 1 });
+      setSingleMember({ name: '', gender: 'Male', levelWeight: 2 });
       refreshMemberList();
     }
   };
@@ -91,7 +91,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
     e.preventDefault();
     const lines = bulkText.split('\n').filter(line => line.trim() !== '');
     const bulkData = lines.map(name => ({
-      name: name.trim(), gender: 'Male', levelWeight: 1, groupId: selectedGroupId
+      name: name.trim(), gender: 'Male', levelWeight: 2, groupId: selectedGroupId
     }));
 
     const response = await fetch(`${API_BASE}/members/bulk`, {
@@ -141,7 +141,9 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
                   <div className="grid grid-cols-2 gap-2">
                     <select value={singleMember.gender} onChange={e => setSingleMember({ ...singleMember, gender: e.target.value })} className="p-2 border rounded-md text-sm"><option>Male</option><option>Female</option></select>
                     <select value={singleMember.levelWeight} onChange={e => setSingleMember({ ...singleMember, levelWeight: parseInt(e.target.value) })} className="p-2 border rounded-md text-sm">
-                      <option value="1">Lvl 1</option><option value="2">Lvl 2</option><option value="3">Lvl 3</option>
+                      <option value="1">L1: Beginner</option>
+                      <option value="2">L2: Intermediate</option>
+                      <option value="3">L3: Advanced</option>
                     </select>
                   </div>
                   <button className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold text-sm uppercase tracking-tighter">Register</button>
@@ -182,7 +184,9 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
                             <form onSubmit={handleUpdate} className="flex gap-2 items-center">
                               <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} className="flex-grow p-1 border rounded text-sm" />
                               <select value={editForm.levelWeight} onChange={e => setEditForm({ ...editForm, levelWeight: parseInt(e.target.value) })} className="p-1 border rounded text-sm">
-                                <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                                <option value="1">L1: Beginner</option>
+                                <option value="2">L2: Intermediate</option>
+                                <option value="3">L3: Advanced</option>
                               </select>
                               <button type="submit" className="text-xs bg-green-600 text-white px-2 py-1 rounded">Save</button>
                               <button onClick={() => setEditingId(null)} className="text-xs bg-slate-300 px-2 py-1 rounded">Cancel</button>
@@ -195,7 +199,7 @@ export default function MemberManager({ preselectedGroupId }: { preselectedGroup
                             <td className="p-4 text-slate-500 text-xs">{m.gender}</td>
                             <td className="p-4 text-center">
                               <span className={`px-2 py-1 rounded text-[10px] font-black ${m.levelWeight === 3 ? 'bg-red-100 text-red-700' : m.levelWeight === 2 ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>
-                                L{m.levelWeight}
+                                {m.levelWeight === 1 ? 'Beginner' : m.levelWeight === 2 ? 'Intermediate' : 'Advanced'}
                               </span>
                             </td>
                             <td className="p-4 text-right space-x-2">

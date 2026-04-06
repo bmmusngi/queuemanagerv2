@@ -103,7 +103,7 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
   const [baseFee, setBaseFee] = useState<number>(0);
   const [gameFee, setGameFee] = useState<number>(0);
   const [walkinName, setWalkinName] = useState('');
-  const [walkinLevel, setWalkinLevel] = useState(1);
+  const [walkinLevel, setWalkinLevel] = useState(2);
   const [walkinGender, setWalkinGender] = useState('Male');
 
   // Game Draft Form State
@@ -1198,7 +1198,11 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                 <form onSubmit={handleAddWalkin} className="space-y-4">
                   <input autoFocus value={walkinName} onChange={e => setWalkinName(e.target.value)} placeholder="Full Name" className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:ring-2 focus:ring-blue-500" />
                   <div className="flex space-x-2">
-                    <select value={walkinLevel} onChange={e => setWalkinLevel(parseInt(e.target.value))} className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"><option value={1}>Level 1</option><option value={2}>Level 2</option><option value={3}>Level 3</option><option value={4}>Level 4</option><option value={5}>Level 5</option></select>
+                    <select value={walkinLevel} onChange={e => setWalkinLevel(parseInt(e.target.value))} className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs">
+                      <option value={1}>Level 1 - Beginner</option>
+                      <option value={2}>Level 2 - Intermediate</option>
+                      <option value={3}>Level 3 - Advanced</option>
+                    </select>
                     <select value={walkinGender} onChange={e => setWalkinGender(e.target.value)} className="flex-1 p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-xs"><option>Male</option><option>Female</option></select>
                   </div>
                   <button type="submit" className="w-full py-4 bg-blue-600 text-white font-black rounded-2xl uppercase tracking-widest shadow-lg shadow-blue-100">Add to Queue</button>
