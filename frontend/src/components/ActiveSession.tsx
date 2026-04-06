@@ -1245,9 +1245,28 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                     <button
                       key={p.id}
                       onClick={() => teamA.find(t => t.id === p.id) ? setTeamA(teamA.filter(t => t.id !== p.id)) : setTeamA([...teamA, p])}
-                      className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${teamA.find(t => t.id === p.id) ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                      className={`w-full text-left p-3 rounded-xl border-2 transition-all shadow-sm relative group ${
+                        teamA.find(t => t.id === p.id) 
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-blue-100' 
+                          : 'bg-white border-transparent hover:border-blue-100'
+                      }`}
                     >
-                      {p.name}
+                      <div className="flex items-center">
+                        <div className={`flex flex-col items-center justify-center border-r pr-3 mr-3 min-w-[32px] ${teamA.find(t => t.id === p.id) ? 'border-blue-400' : 'border-slate-100'}`}>
+                          <span className={`text-[10px] font-black italic leading-none ${teamA.find(t => t.id === p.id) ? 'text-white' : 'text-blue-600'}`}>L{p.levelWeight}</span>
+                          {p.playerStatus === 'WALKIN' && <span className={`text-[6px] font-black px-1 rounded uppercase mt-0.5 tracking-tighter ${teamA.find(t => t.id === p.id) ? 'bg-blue-500 text-white border border-blue-400' : 'bg-orange-100 text-orange-600'}`}>Guest</span>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center flex-wrap gap-1 mb-0.5 truncate">
+                            <span className="text-[11px] font-bold truncate">{p.name}</span>
+                            {p.partnerId && <span className={`text-[7px] font-black uppercase tracking-tighter px-1 rounded-full ${teamA.find(t => t.id === p.id) ? 'bg-blue-500 text-blue-100' : 'bg-purple-100 text-purple-600'}`}>🤝 Linked</span>}
+                          </div>
+                          <div className={`flex space-x-3 text-[8px] font-black uppercase tracking-tighter ${teamA.find(t => t.id === p.id) ? 'text-blue-100' : 'text-slate-400'}`}>
+                            <span>{p.gamesPlayed || 0} Games</span>
+                            <span>{Math.floor(getIdleTime(p) / (1000 * 60))}m Idle</span>
+                          </div>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -1260,9 +1279,28 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                     <button
                       key={p.id}
                       onClick={() => teamB.find(t => t.id === p.id) ? setTeamB(teamB.filter(t => t.id !== p.id)) : setTeamB([...teamB, p])}
-                      className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${teamB.find(t => t.id === p.id) ? 'bg-red-600 text-white border-red-600' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                      className={`w-full text-left p-3 rounded-xl border-2 transition-all shadow-sm relative group ${
+                        teamB.find(t => t.id === p.id) 
+                          ? 'bg-red-600 border-red-600 text-white shadow-red-100' 
+                          : 'bg-white border-transparent hover:border-red-100'
+                      }`}
                     >
-                      {p.name}
+                      <div className="flex items-center">
+                        <div className={`flex flex-col items-center justify-center border-r pr-3 mr-3 min-w-[32px] ${teamB.find(t => t.id === p.id) ? 'border-red-400' : 'border-slate-100'}`}>
+                          <span className={`text-[10px] font-black italic leading-none ${teamB.find(t => t.id === p.id) ? 'text-white' : 'text-red-700'}`}>L{p.levelWeight}</span>
+                          {p.playerStatus === 'WALKIN' && <span className={`text-[6px] font-black px-1 rounded uppercase mt-0.5 tracking-tighter ${teamB.find(t => t.id === p.id) ? 'bg-red-500 text-white border border-red-400' : 'bg-orange-100 text-orange-600'}`}>Guest</span>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center flex-wrap gap-1 mb-0.5 truncate">
+                            <span className="text-[11px] font-bold truncate">{p.name}</span>
+                            {p.partnerId && <span className={`text-[7px] font-black uppercase tracking-tighter px-1 rounded-full ${teamB.find(t => t.id === p.id) ? 'bg-red-500 text-red-100' : 'bg-purple-100 text-purple-600'}`}>🤝 Linked</span>}
+                          </div>
+                          <div className={`flex space-x-3 text-[8px] font-black uppercase tracking-tighter ${teamB.find(t => t.id === p.id) ? 'text-red-100' : 'text-slate-400'}`}>
+                            <span>{p.gamesPlayed || 0} Games</span>
+                            <span>{Math.floor(getIdleTime(p) / (1000 * 60))}m Idle</span>
+                          </div>
+                        </div>
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -1332,9 +1370,28 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                             ? setEditingGame({ ...editingGame, teamA: editingGame.teamA.filter((t: any) => t.id !== p.id) }) 
                             : setEditingGame({ ...editingGame, teamA: [...(editingGame.teamA || []), p] })
                           }
-                          className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${isSelected ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-100' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                          className={`w-full text-left p-3 rounded-xl border-2 transition-all shadow-sm relative group ${
+                            isSelected 
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-blue-100' 
+                              : 'bg-white border-transparent hover:border-blue-100'
+                          }`}
                         >
-                          {p.name}
+                          <div className="flex items-center">
+                            <div className={`flex flex-col items-center justify-center border-r pr-3 mr-3 min-w-[32px] ${isSelected ? 'border-blue-400' : 'border-slate-100'}`}>
+                              <span className={`text-[10px] font-black italic leading-none ${isSelected ? 'text-white' : 'text-blue-600'}`}>L{p.levelWeight}</span>
+                              {p.playerStatus === 'WALKIN' && <span className={`text-[6px] font-black px-1 rounded uppercase mt-0.5 tracking-tighter ${isSelected ? 'bg-blue-500 text-white border border-blue-400' : 'bg-orange-100 text-orange-600'}`}>Guest</span>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center flex-wrap gap-1 mb-0.5 truncate">
+                                <span className="text-[11px] font-bold truncate">{p.name}</span>
+                                {p.partnerId && <span className={`text-[7px] font-black uppercase tracking-tighter px-1 rounded-full ${isSelected ? 'bg-blue-500 text-blue-100' : 'bg-purple-100 text-purple-600'}`}>🤝 Linked</span>}
+                              </div>
+                              <div className={`flex space-x-3 text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                <span>{p.gamesPlayed || 0} Games</span>
+                                <span>{Math.floor(getIdleTime(p) / (1000 * 60))}m Idle</span>
+                              </div>
+                            </div>
+                          </div>
                         </button>
                       );
                     })
@@ -1360,9 +1417,28 @@ export default function ActiveSession({ selectedGroupId, onSessionUpdate }: { se
                             ? setEditingGame({ ...editingGame, teamB: editingGame.teamB.filter((t: any) => t.id !== p.id) }) 
                             : setEditingGame({ ...editingGame, teamB: [...(editingGame.teamB || []), p] })
                           }
-                          className={`w-full text-left p-3 rounded-xl text-xs font-bold border transition-all ${isSelected ? 'bg-red-600 text-white border-red-600 shadow-md shadow-red-100' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                          className={`w-full text-left p-3 rounded-xl border-2 transition-all shadow-sm relative group ${
+                            isSelected 
+                              ? 'bg-red-600 border-red-600 text-white shadow-red-100' 
+                              : 'bg-white border-transparent hover:border-red-100'
+                          }`}
                         >
-                          {p.name}
+                          <div className="flex items-center">
+                            <div className={`flex flex-col items-center justify-center border-r pr-3 mr-3 min-w-[32px] ${isSelected ? 'border-red-400' : 'border-slate-100'}`}>
+                              <span className={`text-[10px] font-black italic leading-none ${isSelected ? 'text-white' : 'text-red-700'}`}>L{p.levelWeight}</span>
+                              {p.playerStatus === 'WALKIN' && <span className={`text-[6px] font-black px-1 rounded uppercase mt-0.5 tracking-tighter ${isSelected ? 'bg-red-500 text-white border border-red-400' : 'bg-orange-100 text-orange-600'}`}>Guest</span>}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center flex-wrap gap-1 mb-0.5 truncate">
+                                <span className="text-[11px] font-bold truncate">{p.name}</span>
+                                {p.partnerId && <span className={`text-[7px] font-black uppercase tracking-tighter px-1 rounded-full ${isSelected ? 'bg-red-500 text-red-100' : 'bg-purple-100 text-purple-600'}`}>🤝 Linked</span>}
+                              </div>
+                              <div className={`flex space-x-3 text-[8px] font-black uppercase tracking-tighter ${isSelected ? 'text-red-100' : 'text-slate-400'}`}>
+                                <span>{p.gamesPlayed || 0} Games</span>
+                                <span>{Math.floor(getIdleTime(p) / (1000 * 60))}m Idle</span>
+                              </div>
+                            </div>
+                          </div>
                         </button>
                       );
                     })
